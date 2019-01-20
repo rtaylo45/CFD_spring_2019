@@ -6,6 +6,7 @@ The physics type applied problem specific physics to the mesh domain. This
 sets the solution.
 
 """
+import copy
 
 class Physics(object):
 
@@ -16,13 +17,18 @@ class Physics(object):
     @param problem type		The type of problem we are trying to solve
 
 	"""
-	def __init__(self, mesh, problemType, solveType=0):
+	def __init__(self, mesh, problemType, solveType=0, tol=1.0e-2):
 		self.mesh = mesh
 		self.problemType = problemType
 		self.solveType = solveType
+		self.tol = tol
+		self.iterations = 0
 
 		self.__runPreSolve()
 
+	"""
+	@brief Sets the initial guess for the solution
+	"""
 	def __runPreSolve(self):
 
 		# Solution method is iterative using initial guesses for temperature
@@ -34,8 +40,80 @@ class Physics(object):
 					if not node.solved:
 						node.solution = initialGuess
 
-	def __updateSolution(self):
-		pass
+	def solve(self):
+		self.__sweep(0)
 
-	def __sweep(self):
-		pass
+	"""
+	@Brief The part that actually solves the problem
+	"""
+	def __updateSolution(self, node):
+		if self.problemType=="Laplace":
+			realDiff = 1.0
+			while realDiff > self.tol:
+				oldSolution = copy.deepcopy(node.solution)
+				# Updates the solution
+				self.__updateLaplace(node)
+				newSolution = node.solution
+				realDiff = abs(newSolution-oldSolution)
+				self.iterations += 1
+
+
+
+
+	"""
+	@Brief Loops through the mesh
+
+	@pattern 	The pattern it uses to to sweep
+	"""
+	def __sweep(self,pattern):
+		if pattern==0:
+			self.__sweepTopDown()
+
+
+	"""
+	@Brief Sweeps from the top of the domain to the bottom
+	"""
+	def __sweepTopDown(self):
+		for i in xrange(self.mesh.numOfxNodes-1,-1,-1):
+			for j in xrange(self.mesh.numOfyNodes-1,-1,-1):
+				node = self.mesh.getNodeByLoc(i,j)
+				if not node.solved:
+					self.__updateSolution(node)
+
+
+
+	def __updateLaplace(self,node):
+		dx = self.mesh.dx
+		dy = self.mesh.dy
+		Te = node.east.solution
+		Tw = node.west.solution
+		Tn = node.north.solution
+		Ts = node.south.solution
+
+		temp1 = (dx**2.*dy**2.)/(2.*(dy**2.+dx**2.))
+		xcontribution = (Te+Tw)/(dx**2.)
+		ycontribution = (Tn+Tw)/(dy**2.)
+
+		node.solution = temp1*(xcontribution+ycontribution)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
