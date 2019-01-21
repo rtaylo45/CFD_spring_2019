@@ -7,7 +7,8 @@ sets the solution.
 
 """
 import copy
-from math import sin, sinh, pi 
+#from math import sin, sinh, pi 
+import numpy as np
 
 class Physics(object):
 
@@ -93,7 +94,7 @@ class Physics(object):
 		Tn = node.north.solution
 		Ts = node.south.solution
 
-		temp1 = (dx**2.*dy**2.)/(2.*(dy**2.+dx**2.))
+		temp1 = (dx**2.*dy**2.)/(4.*(dy**2.+dx**2.))
 		xcontribution = (Te+Tw)/(dx**2.)
 		ycontribution = (Tn+Tw)/(dy**2.)
 
@@ -102,20 +103,21 @@ class Physics(object):
 	def __exactLaplace(self):
 		h = self.mesh.yLength
 		w = self.mesh.xLength
-		n = 21
+        print self.mesh.yLength, self.mesh.xLength
+        n = 21
 
-		for i in xrange(self.mesh.numOfxNodes):
-			for j in xrange(self.mesh.numOfyNodes):
-				node = self.mesh.getNodeByLoc(i,j)
-				x = node.x
-				y = node.y
-				exact = 0.0
-				for k in xrange(1,n+1,2):
-					top = sinh(n*pi*y/w)*sin(n*pi*x/w)
-					bottom = 1./(n*sinh(n*pi*h/w))
-					exact = exact + top/bottom
+        for i in xrange(self.mesh.numOfxNodes):
+		    for j in xrange(self.mesh.numOfyNodes):
+			    node = self.mesh.getNodeByLoc(i,j)
+			    x = node.x
+			    y = node.y
+			    exact = 0.0
+			    for k in xrange(1,n+1,2):
+				    top = np.sinh(k*np.pi*y/w)*np.sin(k*np.pi*x/w)
+				    bottom = 1./(k*np.sinh(k*np.pi*h/w))
+				    exact = exact + top/bottom
 
-				node.exact = (400.0/pi)*exact
+			    node.exact = (400.0/np.pi)*exact
 
 
 	def __calcError(self):
