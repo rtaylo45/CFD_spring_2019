@@ -7,6 +7,7 @@ sets the solution.
 
 """
 import copy
+from math import sin, sinh, pi 
 
 class Physics(object):
 
@@ -42,6 +43,8 @@ class Physics(object):
 
 	def solve(self):
 		self.__sweep(0)
+		self.__exactLaplace()
+		self.__calcError()
 
 	"""
 	@Brief The part that actually solves the problem
@@ -95,6 +98,36 @@ class Physics(object):
 		ycontribution = (Tn+Tw)/(dy**2.)
 
 		node.solution = temp1*(xcontribution+ycontribution)
+
+	def __exactLaplace(self):
+		h = self.mesh.yLength
+		w = self.mesh.xLength
+		n = 21
+
+		for i in xrange(self.mesh.numOfxNodes):
+			for j in xrange(self.mesh.numOfyNodes):
+				node = self.mesh.getNodeByLoc(i,j)
+				x = node.x
+				y = node.y
+				exact = 0.0
+				for k in xrange(1,n+1,2):
+					top = sinh(n*pi*y/w)*sin(n*pi*x/w)
+					bottom = 1./(n*sinh(n*pi*h/w))
+					exact = exact + top/bottom
+
+				node.exact = (400.0/pi)*exact
+
+
+	def __calcError(self):
+		for i in xrange(self.mesh.numOfxNodes):
+			for j in xrange(self.mesh.numOfyNodes):
+				node = self.mesh.getNodeByLoc(i,j)
+				try:
+					absError = abs(node.exact-node.solution)/node.solution
+					node.error = absError
+				except:
+					node.error = 0.0
+
 
 
 

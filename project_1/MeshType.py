@@ -10,6 +10,9 @@ and so on. In the apply BC method its difference to get the 100 BC to include th
 corners of the domain. 
 
 """
+import numpy as np
+import matplotlib.pyplot as plt
+plt.style.use('seaborn-white')
 
 class Mesh(object):
 
@@ -131,6 +134,11 @@ class Mesh(object):
         else:
             return True
 
+    def __mapMeshijToMatrixij(self,i,j):
+        k = i
+        h = j+(self.numOfyNodes-1)-i
+        return h,k
+
     """
     @Brief Runs functions prier to solve
     """
@@ -169,6 +177,39 @@ class Mesh(object):
             return node
         else:
             return None
+
+    def plot2D(self):
+        x = []
+        y = []
+        for i in xrange(self.numOfxNodes):
+            node = self.getNodeByLoc(i,0)
+            x.append(node.x)
+
+        for j in xrange(self.numOfyNodes):
+            node = self.getNodeByLoc(0,j)
+            y.append(node.y)
+
+
+        X, Y = np.meshgrid(x, y)
+
+        Solution = np.zeros(X.shape)
+        print X.shape
+        print 
+        print Solution
+
+        for i in xrange(self.numOfxNodes):
+            for j in xrange(self.numOfyNodes):
+                h,k = self.__mapMeshijToMatrixij(i,j)
+                print i,j, h,k
+                node = self.getNodeByLoc(i,j)
+                Solution[h,k] = node.solution
+
+        #plt.contour(X, Y, Solution, 500, cmap='RdGy')
+        #plt.title('Gibbs Energy at '+str(MolU)+' Mole U and '+str(MolTh)+' Mole Th')
+        #plt.ylabel('Moles of O2')
+        #plt.xlabel('Temperature (K)')
+        #plt.colorbar()
+        #plt.show()
 
 class Node(Mesh):
 
