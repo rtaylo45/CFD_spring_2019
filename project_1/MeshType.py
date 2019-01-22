@@ -12,6 +12,7 @@ corners of the domain.
 """
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns; sns.set()
 plt.style.use('seaborn-white')
 
 class Mesh(object):
@@ -25,18 +26,38 @@ class Mesh(object):
     @param yNodes   Number of nodes in y direction
     """
     def __init__(self, xLength, yLength, xNodes, yNodes):
+
+        # Total length in x direction
         self.xLength = xLength
+        # Total length in y direction
         self.yLength = yLength
+        # Total number of nodes in x direction
         self.numOfxNodes = xNodes
+        # Total number of nodes in y direction
         self.numOfyNodes = yNodes
+        # Total number of mesh nodes
         self.numOfTotalNodes = xNodes*yNodes
+        # List of all the mesh nodes
         self.nodes = []
+        # List of all the nodes in the solution domain. This doesn't include
+        # the boundary nodes
+        self.solNodes = []
+        # The delta x term
         self.dx = None
+        # The delta y term
         self.dy = None
+        # BC on north side of mesh
         self.northBC = None
+        # BC on south side of mesh
         self.southBC = None
+        # BC on east side of mesh
         self.eastBC = None
+        # BC on west side of mesh
         self.westBC = None
+        # Containter that stores the map from mesh to ploting matrix
+        self.jMeshToMatrix = None
+        # The number of solution nodes
+        self.maxSolIndex = None
 
         # builds the geometry
         self.__buildGeo()
@@ -134,16 +155,68 @@ class Mesh(object):
         else:
             return True
 
+    """
+    @Brief Takes in the mesh i j index and transforms it to the plotting matrix 
+           i,j (h,k).
+
+    @param i    The i mesh index
+    @param j    The j mesh index
+    """
     def __mapMeshijToMatrixij(self,i,j):
         k = i
-        h = j+(self.numOfyNodes-1)-i
+        h = self.jMeshToMatrix[j]
         return h,k
+
+    """
+    @Brief Generates a map for connecting the solution to the plotting matrix.
+           This is done because Array for plot starts from top. The way the 
+           mesh is created is from the bottom up
+    """
+    def __generateMapToMatrix(self):
+
+        # j index vector
+        jVect = [j for j in xrange(self.numOfyNodes)]
+        self.jMeshToMatrix = jVect[::-1]
+
+    """
+    @Brief Sets the solution index for each node
+    """
+    def __setSolIndex(self):
+        k = 0
+        for i in xrange(self.numOfxNodes):
+            for j in xrange(self.numOfyNodes):
+                node = self.getNodeByLoc(i,j)
+                if not node.solved:
+                    node.solIndex = k
+                    self.solNodes.append(node)
+                    k += 1
+        self.maxSolIndex = k
+
+    """
+    @Brief Sets the node coefficients for the A matrix
+    """
+    def __setAMatrixCoeff(self):
+        alpha = 1./self.dx**2.
+        beta = -(2./self.dx**2. + 2./self.dy**2.)
+        gamma = 1./self.dy**2.
+        for i in xrange(self.numOfxNodes):
+            for j in xrange(self.numOfxNodes):
+                node = self.getNodeByLoc(i,j)
+
+                node.myCoeff = beta
+                node.eastCoeff = alpha
+                node.westCoeff = alpha
+                node.northCoeff = gamma
+                node.southCoeff = gamma
 
     """
     @Brief Runs functions prier to solve
     """
     def finalize(self):
         self.__applyBC()
+        self.__generateMapToMatrix()
+        self.__setSolIndex()
+        self.__setAMatrixCoeff()
 
     """
     @Brief Setter for boundary condition
@@ -178,7 +251,37 @@ class Mesh(object):
         else:
             return None
 
-    def plot2D(self):
+    """
+    @Brief Gets the node using the absolute index
+
+    @param k    The absolute index
+    """
+    def getNodeByAbsIndex(self,k):
+        if k<0:
+            return None
+        else:
+            return self.nodes[k]
+
+    """
+    @Brief Gets the node using the solution index. Solution index doesn't 
+           induce the boundary conditions
+
+    @param k    The solution index
+    """
+    def getNodeBySolIndex(self,k):
+        if k<0:
+            return None
+        elif k>self.maxSolIndex-1:
+            return None
+        else:
+            return self.solNodes[k]
+    """
+    @Brief Plots the solution on a contour plot
+
+    @param solution     The soltuion you are trying to plot. 
+                        exact or approx
+    """
+    def plot2D(self,solution):
         x = []
         y = []
         for i in xrange(self.numOfxNodes):
@@ -193,23 +296,24 @@ class Mesh(object):
         X, Y = np.meshgrid(x, y)
 
         Solution = np.zeros(X.shape)
-        print X.shape
-        print 
-        print Solution
 
         for i in xrange(self.numOfxNodes):
             for j in xrange(self.numOfyNodes):
                 h,k = self.__mapMeshijToMatrixij(i,j)
-                print i,j, h,k
                 node = self.getNodeByLoc(i,j)
-                Solution[h,k] = node.solution
+                if solution=="approx":
+                    Solution[h,k] = node.solution
+                elif solution=="exact":
+                    Solution[h,k] = node.exact
 
-        #plt.contour(X, Y, Solution, 500, cmap='RdGy')
+        plt.contour(X, Y, Solution,500, cmap='RdGy')
         #plt.title('Gibbs Energy at '+str(MolU)+' Mole U and '+str(MolTh)+' Mole Th')
         #plt.ylabel('Moles of O2')
         #plt.xlabel('Temperature (K)')
-        #plt.colorbar()
-        #plt.show()
+        plt.colorbar()
+        #ax = sns.heatmap(Solution)
+        #sns.plt.show()
+        plt.show()
 
 class Node(Mesh):
 
@@ -223,14 +327,25 @@ class Node(Mesh):
     @param y        y location on domain
     """
     def __init__(self, i, j, absIndex, x, y):
+        # Mesh i index, x index
         self.i = i
+        # Mesh j index, y index
         self.j = j
+        # Absolution index. Includes the boundary nodes
         self.absIndex = absIndex
+        # Solution index. Does not include boundary nodes
+        self.solIndex = None
+        # x position 
         self.x = x
+        # y position
         self.y = y
+        # the approx solution
         self.solution = None
+        # the exact solution
         self.exact = None
+        # error between approx and exact
         self.error = None
+        # logical saying if the nodes has been solved or not
         self.solved = False
 
         # Node connection information
@@ -238,6 +353,14 @@ class Node(Mesh):
         self.west = None
         self.north = None
         self.south = None
+
+        # Coefficients for A matrix
+        self.eastCoeff = None
+        self.westCoeff = None
+        self.northCoeff = None
+        self.southCoeff = None
+        self.myCoeff = None
+
 
     """
     @Brief Sets the node connection
