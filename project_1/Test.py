@@ -2,7 +2,7 @@ import MeshType as Me
 import PhysicsType as Phy
 
 # Builds mesh
-mesh = Me.Mesh(xLength=15.0, yLength=20.0, xNodes=31, yNodes=41)
+mesh = Me.Mesh(xLength=15.0, yLength=20.0, xNodes=4, yNodes=5)
 
 # sets the boundary conditions
 mesh.setBC(side="south", BC=0.)

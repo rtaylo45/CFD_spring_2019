@@ -70,7 +70,8 @@ class Physics(object):
 	"""
 	def __sweep(self,pattern):
 		if pattern==0:
-			self.__sweepTopDown()
+			#self.__sweepTopDown()
+			self.__sweepBottomUp()
 		elif pattern==1:
 			A = self.__getAMatrix()
 			print A
@@ -92,6 +93,14 @@ class Physics(object):
 				if not node.solved:
 					self.__updateSolution(node)
 
+	def __sweepBottomUp(self):
+		for i in xrange(self.mesh.numOfxNodes):
+			for j in xrange(self.mesh.numOfyNodes):
+				node = self.mesh.getNodeByLoc(i,j)
+				if not node.solved:
+					self.__updateSolution(node)
+
+
 	"""
 	@Brief Updates the solution for a sweeping pattern soltuion method
 
@@ -105,11 +114,11 @@ class Physics(object):
 		Tn = node.north.solution
 		Ts = node.south.solution
 
-		temp1 = (dx**2.*dy**2.)/(2.*(dy**2.+dx**2.))
+		temp1 = (2./dx**2. + 2./dy**2.)
 		xcontribution = (Te+Tw)/(dx**2.)
 		ycontribution = (Tn+Tw)/(dy**2.)
 
-		node.solution = temp1*(xcontribution+ycontribution)
+		node.solution = (1./temp1)*(xcontribution+ycontribution)
 
 	"""
 	@Brief Loops over the mesh and sets the exact soltuion
