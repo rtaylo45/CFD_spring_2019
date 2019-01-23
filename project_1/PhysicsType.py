@@ -45,41 +45,42 @@ class Physics(object):
 	@Brief Solves the problem
 	"""
 	def solve(self,pattern):
-		self.__sweep(pattern)
-		self.__exactLaplace()
-		self.__calcError()
-
-	"""
-	@Brief The part that actually solves the problem
-	"""
-	def __updateSolution(self, node):
-		realDiff = 1.0
-		while realDiff > self.tol:
-			oldSolution = copy.deepcopy(node.solution)
-			# Updates the solution
-			self.__updateLaplace(node)
-			newSolution = node.solution
-			realDiff = abs(newSolution-oldSolution)
-			self.iterations += 1
-
-
-	"""
-	@Brief Loops through the mesh
-
-	@pattern 	The pattern it uses to to sweep
-	"""
-	def __sweep(self,pattern):
 		if pattern==0:
-			#self.__sweepTopDown()
-			self.__sweepBottomUp()
+			self.__gaussSeidel()
 		elif pattern==1:
 			A = self.__getAMatrix()
-			print A
-			#b = self.__getbVector()
+			b = self.__getbVector()
 
-			#solutionVector = self.mesh.solveMatrix(A,b)
+			solutionVector = np.linalg.solve(A,b)
 
-			#self.__unPackSolution(solutionVector)
+			self.__unPackSolution(solutionVector)
+        #self.__exactLaplace()
+        #self.__calcError()
+
+	def __unPackSolution(self, solutionVector):
+		for k in xrange(self.mesh.maxSolIndex):
+			node = self.mesh.getNodeBySolIndex(k)
+			node.solution = solutionVector[k]
+
+	def __gaussSeidel(self):
+		diff = 1.0
+		iterations = 0
+
+		while diff > self.tol:
+			# Loops through the model
+			if iterations % 2 == 0:
+				self.__sweepTopDown()
+			else:
+				self.__sweepBottomUp()
+
+			diff = 0.0
+
+			for node in self.mesh.nodes:
+				if not node.solved:
+					diff = diff + abs(node.solution-node.oldSolution)
+
+			iterations += 1
+			print diff
 
 
 
@@ -88,18 +89,26 @@ class Physics(object):
 	"""
 	def __sweepTopDown(self):
 		for i in xrange(self.mesh.numOfxNodes-1,-1,-1):
-			for j in xrange(self.mesh.numOfyNodes-1,-1,-1):
+			for j in xrange(self.mesh.numOfyNodes):
 				node = self.mesh.getNodeByLoc(i,j)
+				node.oldSolution = copy.deepcopy(node.solution)
 				if not node.solved:
-					self.__updateSolution(node)
+					self.__updateLaplace(node)
 
 	def __sweepBottomUp(self):
 		for i in xrange(self.mesh.numOfxNodes):
 			for j in xrange(self.mesh.numOfyNodes):
 				node = self.mesh.getNodeByLoc(i,j)
+				node.oldSolution = copy.deepcopy(node.solution)
 				if not node.solved:
-					self.__updateSolution(node)
+					self.__updateLaplace(node)
 
+	def __sweepAbsIndex(self):
+		for node in self.mesh.nodes:
+			if not node.solved:
+				self.__updateSolution(node)
+	def __sweepAbsIndexRev(self):
+		pass
 
 	"""
 	@Brief Updates the solution for a sweeping pattern soltuion method
@@ -116,7 +125,7 @@ class Physics(object):
 
 		temp1 = (2./dx**2. + 2./dy**2.)
 		xcontribution = (Te+Tw)/(dx**2.)
-		ycontribution = (Tn+Tw)/(dy**2.)
+		ycontribution = (Tn+Ts)/(dy**2.)
 
 		node.solution = (1./temp1)*(xcontribution+ycontribution)
 
@@ -156,71 +165,40 @@ class Physics(object):
 				except:
 					node.error = 0.0
 
-	"""
-	@Brief Creats the A matrix used in the solution by Ax=b method
-	"""
 	def __getAMatrix(self):
 		numOfColumns = self.mesh.numOfxNodes-2
 		numOfRows = self.mesh.numOfyNodes-2
-		lastNode = self.mesh.maxSolIndex-1
 		A = np.zeros((numOfColumns*numOfRows,numOfRows*numOfColumns))
 
+		alpha = 1./(self.mesh.dx**2.)
+		beta = -(2./(self.mesh.dx**2.) + 2./(self.mesh.dy**2.))
+		gamma = 1./(self.mesh.dy**2.)
+
+		# diagonal
+		for i in xrange(numOfColumns*numOfRows):
+			# main diagonal
+			A[i,i] = beta
+			# the off off diagonals
+			if i-numOfRows<0:
+				pass
+			else:
+				A[i-numOfRows,i] = alpha
+				A[i,i-numOfRows] = alpha
+
+			# the off diagonals
+			if (i+1)%numOfRows:
+				A[i+1,i] = gamma
+				A[i,i+1] = gamma
+
+		return A
+
+	def __getbVector(self):
+		B = np.zeros((self.mesh.maxSolIndex,1))
 		for k in xrange(self.mesh.maxSolIndex):
 			node = self.mesh.getNodeBySolIndex(k)
+			B[k] = node.source
 
-			# the first column
-			if k < numOfRows:
-				# first node (left hand bottom corner)
-				if k==0:
-					#A[0,0] = node.myCoeff
-					#A[0,1] = node.northCoeff
-					#A[0,numOfRows] = node.eastCoeff
-					A[0,0] = 1
-					A[0,1] = 2
-					A[0,numOfRows] = 3
-
-				elif k==numOfRows-1:
-					#A[k,k] = node.myCoeff
-					#A[k,k-1] = node.southCoeff
-					#A[k+1,k] = node.eastCoeff
-					A[k,k] = 8
-					A[k,k-1] = 9
-					A[k,k+numOfRows] = 10
-				# Nodes between corners
-				else:
-					#A[k,k] = node.myCoeff
-					#A[k,k-1] = node.southCoeff
-					#A[k,k+1] = node.northCoeff
-					#A[k,k+numOfRows] = node.eastCoeff
-					A[k,k] = 4
-					A[k,k-1] = 5
-					A[k,k+1] = 6
-					A[k,k+numOfRows] = 7
-
-			# The last column
-			elif k >= (numOfColumns-1)*numOfRows:
-				print "last column",k
-				# right hand bottom corner
-				if k==(numOfColumns-1)*numOfRows:
-					#A[k,k] = node.myCoeff
-					#A[k,k+1] = node.northCoeff
-					#A[k-numOfRows,k] = node.westCoeff
-					A[k,k] = 11
-					A[k,k+1] = 12
-					A[k,k-numOfRows] = 13
-				# right and top corner
-				elif k==lastNode:
-					A[k,k] = 18
-					A[k,k-1] = 19
-					A[k,k-numOfRows] = 20
-				else:
-					A[k,k] = 14
-					A[k,k+1] = 15
-					A[k,k-1] = 16
-					A[k,k-numOfRows] = 17
-			else:
-				print "mid ",k
-		return A
+		return B 
 
 
 

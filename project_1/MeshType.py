@@ -156,29 +156,6 @@ class Mesh(object):
             return True
 
     """
-    @Brief Takes in the mesh i j index and transforms it to the plotting matrix 
-           i,j (h,k).
-
-    @param i    The i mesh index
-    @param j    The j mesh index
-    """
-    def __mapMeshijToMatrixij(self,i,j):
-        k = i
-        h = self.jMeshToMatrix[j]
-        return h,k
-
-    """
-    @Brief Generates a map for connecting the solution to the plotting matrix.
-           This is done because Array for plot starts from top. The way the 
-           mesh is created is from the bottom up
-    """
-    def __generateMapToMatrix(self):
-
-        # j index vector
-        jVect = [j for j in xrange(self.numOfyNodes)]
-        self.jMeshToMatrix = jVect[::-1]
-
-    """
     @Brief Sets the solution index for each node
     """
     def __setSolIndex(self):
@@ -192,31 +169,27 @@ class Mesh(object):
                     k += 1
         self.maxSolIndex = k
 
-    """
-    @Brief Sets the node coefficients for the A matrix
-    """
-    def __setAMatrixCoeff(self):
-        alpha = 1./self.dx**2.
-        beta = -(2./self.dx**2. + 2./self.dy**2.)
-        gamma = 1./self.dy**2.
-        for i in xrange(self.numOfxNodes):
-            for j in xrange(self.numOfxNodes):
-                node = self.getNodeByLoc(i,j)
-
-                node.myCoeff = beta
-                node.eastCoeff = alpha
-                node.westCoeff = alpha
-                node.northCoeff = gamma
-                node.southCoeff = gamma
+    def __setNodeSource(self):
+        for node in self.nodes:
+            source = 0.0
+            if not node.solved:
+                if node.east.solved:
+                    source += -node.east.solution/self.dx**2.
+                if node.west.solved:
+                    source += -node.west.solution/self.dx**2.
+                if node.north.solved:
+                    source += -node.north.solution/self.dy**2.
+                if node.south.solved:
+                    source += -node.south.solution/self.dy**2.
+                node.source = source
 
     """
     @Brief Runs functions prier to solve
     """
     def finalize(self):
         self.__applyBC()
-        self.__generateMapToMatrix()
         self.__setSolIndex()
-        self.__setAMatrixCoeff()
+        self.__setNodeSource()
 
     """
     @Brief Setter for boundary condition
@@ -288,7 +261,7 @@ class Mesh(object):
             node = self.getNodeByLoc(i,0)
             x.append(node.x)
 
-        for j in xrange(self.numOfyNodes):
+        for j in xrange(self.numOfyNodes-1,-1,-1):
             node = self.getNodeByLoc(0,j)
             y.append(node.y)
 
@@ -297,16 +270,19 @@ class Mesh(object):
 
         Solution = np.zeros(X.shape)
 
-        for i in xrange(self.numOfxNodes):
-            for j in xrange(self.numOfyNodes):
-                h,k = self.__mapMeshijToMatrixij(i,j)
+        h = 0
+        for j in xrange(self.numOfyNodes-1,-1,-1):
+            k = 0
+            for i in xrange(0,self.numOfxNodes,1):
                 node = self.getNodeByLoc(i,j)
                 if solution=="approx":
                     Solution[h,k] = node.solution
                 elif solution=="exact":
                     Solution[h,k] = node.exact
-
-        plt.contour(X, Y, Solution,500, cmap='RdGy')
+                k+= 1
+            h+=1
+            
+        plt.contour(X, Y, Solution,30, cmap='RdGy')
         #plt.title('Gibbs Energy at '+str(MolU)+' Mole U and '+str(MolTh)+' Mole Th')
         #plt.ylabel('Moles of O2')
         #plt.xlabel('Temperature (K)')
@@ -341,25 +317,21 @@ class Node(Mesh):
         self.y = y
         # the approx solution
         self.solution = None
+        # the old solution
+        self.oldSolution = None
         # the exact solution
         self.exact = None
         # error between approx and exact
         self.error = None
         # logical saying if the nodes has been solved or not
         self.solved = False
+        self.source = None
 
         # Node connection information
         self.east = None
         self.west = None
         self.north = None
         self.south = None
-
-        # Coefficients for A matrix
-        self.eastCoeff = None
-        self.westCoeff = None
-        self.northCoeff = None
-        self.southCoeff = None
-        self.myCoeff = None
 
 
     """
