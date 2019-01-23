@@ -11,7 +11,9 @@ corners of the domain.
 
 """
 import numpy as np
+from numpy import linalg as LA
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 import seaborn as sns; sns.set()
 plt.style.use('seaborn-white')
 
@@ -254,7 +256,7 @@ class Mesh(object):
     @param solution     The soltuion you are trying to plot. 
                         exact or approx
     """
-    def plot2D(self,solution):
+    def plot(self,solution,plotType='2d'):
         x = []
         y = []
         for i in xrange(self.numOfxNodes):
@@ -281,15 +283,31 @@ class Mesh(object):
                     Solution[h,k] = node.exact
                 k+= 1
             h+=1
-            
-        plt.contour(X, Y, Solution,30, cmap='RdGy')
-        #plt.title('Gibbs Energy at '+str(MolU)+' Mole U and '+str(MolTh)+' Mole Th')
-        #plt.ylabel('Moles of O2')
-        #plt.xlabel('Temperature (K)')
-        plt.colorbar()
-        #ax = sns.heatmap(Solution)
-        #sns.plt.show()
-        plt.show()
+        
+        if plotType=='2d':
+
+            plt.contour(X, Y, Solution,100, cmap='RdGy')
+            plt.title('2-D Laplace heat equation. Resolution '+str(self.numOfxNodes)+' x '+str(self.numOfyNodes))
+            plt.ylabel('y (cm)')
+            plt.xlabel('x (cm)')
+            plt.colorbar()
+            plt.show()
+
+        elif plotType=='3d':
+
+            fig = plt.figure()
+            ax = fig.gca(projection='3d')
+            ax.plot_surface(X,Y,Solution,cmap=plt.cm.rainbow,linewidth=0, antialiased=False)
+            ax.set_xlabel('x (cm)')
+            ax.set_ylabel('y (cm)')
+            ax.set_zlabel('Temperature (c)')
+            plt.title('2-D Laplace heat equation. Resolution '+str(self.numOfxNodes)+' x '+str(self.numOfyNodes))
+
+            plt.show()
+
+    def solveLinalg(self,A,b):
+        x = np.linalg.solve(A,b)
+        return x
 
 class Node(Mesh):
 
@@ -357,9 +375,6 @@ class Node(Mesh):
             self.west = node
         else:
             print "Invalid location"
-
-
-
 
 
 

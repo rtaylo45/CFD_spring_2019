@@ -7,7 +7,6 @@ sets the solution.
 
 """
 import copy
-#from math import sin, sinh, pi 
 import numpy as np
 
 class Physics(object):
@@ -51,83 +50,16 @@ class Physics(object):
 			A = self.__getAMatrix()
 			b = self.__getbVector()
 
-			solutionVector = np.linalg.solve(A,b)
+			solutionVector = self.mesh.solveLinalg(A,b)
 
 			self.__unPackSolution(solutionVector)
-        #self.__exactLaplace()
-        #self.__calcError()
+		self.__exactLaplace()
 
 	def __unPackSolution(self, solutionVector):
 		for k in xrange(self.mesh.maxSolIndex):
 			node = self.mesh.getNodeBySolIndex(k)
 			node.solution = solutionVector[k]
 
-	def __gaussSeidel(self):
-		diff = 1.0
-		iterations = 0
-
-		while diff > self.tol:
-			# Loops through the model
-			if iterations % 2 == 0:
-				self.__sweepTopDown()
-			else:
-				self.__sweepBottomUp()
-
-			diff = 0.0
-
-			for node in self.mesh.nodes:
-				if not node.solved:
-					diff = diff + abs(node.solution-node.oldSolution)
-
-			iterations += 1
-			print diff
-
-
-
-	"""
-	@Brief Sweeps from the top of the domain to the bottom
-	"""
-	def __sweepTopDown(self):
-		for i in xrange(self.mesh.numOfxNodes-1,-1,-1):
-			for j in xrange(self.mesh.numOfyNodes):
-				node = self.mesh.getNodeByLoc(i,j)
-				node.oldSolution = copy.deepcopy(node.solution)
-				if not node.solved:
-					self.__updateLaplace(node)
-
-	def __sweepBottomUp(self):
-		for i in xrange(self.mesh.numOfxNodes):
-			for j in xrange(self.mesh.numOfyNodes):
-				node = self.mesh.getNodeByLoc(i,j)
-				node.oldSolution = copy.deepcopy(node.solution)
-				if not node.solved:
-					self.__updateLaplace(node)
-
-	def __sweepAbsIndex(self):
-		for node in self.mesh.nodes:
-			if not node.solved:
-				self.__updateSolution(node)
-	def __sweepAbsIndexRev(self):
-		pass
-
-	"""
-	@Brief Updates the solution for a sweeping pattern soltuion method
-
-	@param node 	mesh node object
-	"""
-	def __updateLaplace(self,node):
-		dx = self.mesh.dx
-		dy = self.mesh.dy
-		Te = node.east.solution
-		Tw = node.west.solution
-		Tn = node.north.solution
-		Ts = node.south.solution
-
-		temp1 = (2./dx**2. + 2./dy**2.)
-		xcontribution = (Te+Tw)/(dx**2.)
-		ycontribution = (Tn+Ts)/(dy**2.)
-
-		node.solution = (1./temp1)*(xcontribution+ycontribution)
 
 	"""
 	@Brief Loops over the mesh and sets the exact soltuion
@@ -212,6 +144,69 @@ class Physics(object):
 
 
 
+	def __gaussSeidel(self):
+		diff = 1.0
+		iterations = 0
+
+		while diff > self.tol:
+			# Loops through the model
+			if iterations % 2 == 0:
+				self.__sweepTopDown()
+			else:
+				self.__sweepBottomUp()
+
+			diff = 0.0
+
+			for node in self.mesh.nodes:
+				if not node.solved:
+					diff = diff + abs(node.solution-node.oldSolution)
+
+			iterations += 1
+
+	"""
+	@Brief Sweeps from the top of the domain to the bottom
+	"""
+	def __sweepTopDown(self):
+		for i in xrange(self.mesh.numOfxNodes-1,-1,-1):
+			for j in xrange(self.mesh.numOfyNodes):
+				node = self.mesh.getNodeByLoc(i,j)
+				node.oldSolution = copy.deepcopy(node.solution)
+				if not node.solved:
+					self.__updateLaplace(node)
+
+	def __sweepBottomUp(self):
+		for i in xrange(self.mesh.numOfxNodes):
+			for j in xrange(self.mesh.numOfyNodes):
+				node = self.mesh.getNodeByLoc(i,j)
+				node.oldSolution = copy.deepcopy(node.solution)
+				if not node.solved:
+					self.__updateLaplace(node)
+
+	def __sweepAbsIndex(self):
+		for node in self.mesh.nodes:
+			if not node.solved:
+				self.__updateSolution(node)
+	def __sweepAbsIndexRev(self):
+		pass
+
+	"""
+	@Brief Updates the solution for a sweeping pattern soltuion method
+
+	@param node 	mesh node object
+	"""
+	def __updateLaplace(self,node):
+		dx = self.mesh.dx
+		dy = self.mesh.dy
+		Te = node.east.solution
+		Tw = node.west.solution
+		Tn = node.north.solution
+		Ts = node.south.solution
+
+		temp1 = (2./dx**2. + 2./dy**2.)
+		xcontribution = (Te+Tw)/(dx**2.)
+		ycontribution = (Tn+Ts)/(dy**2.)
+
+		node.solution = (1./temp1)*(xcontribution+ycontribution)
 
 
 
