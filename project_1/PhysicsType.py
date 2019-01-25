@@ -43,10 +43,11 @@ class Physics(object):
 	"""
 	@Brief Solves the problem
 	"""
-	def solve(self,pattern):
-		if pattern==0:
-			self.__gaussSeidel()
-		elif pattern==1:
+	def solve(self,solveType):
+		if solveType==0:
+			diffs, iterations = self.__gaussSeidel()
+			return diffs, iterations
+		elif solveType==1:
 			A = self.__getAMatrix()
 			b = self.__getbVector()
 
@@ -54,6 +55,7 @@ class Physics(object):
 
 			self.__unPackSolution(solutionVector)
 		self.__exactLaplace()
+		self.__calcError()
 
 	def __unPackSolution(self, solutionVector):
 		for k in xrange(self.mesh.maxSolIndex):
@@ -77,7 +79,7 @@ class Physics(object):
 				exact = 0.0
 
 				for k in xrange(1,n+1,2):
-					temp = np.sinh(k*np.pi*y/h)
+					temp = np.sinh(k*np.pi*y/w)
 					temp1 = np.sin(k*np.pi*x/w)
 					temp2 = 1./(k*np.sinh(k*np.pi*h/w))
 					exact += temp*temp1*temp2
@@ -88,15 +90,18 @@ class Physics(object):
 	@Brief Loops over the mesh to set the error between exacpt and approx
 	"""
 	def __calcError(self):
+		diff = 0.0
 		for i in xrange(self.mesh.numOfxNodes):
 			for j in xrange(self.mesh.numOfyNodes):
 				node = self.mesh.getNodeByLoc(i,j)
-				try:
-					absError = abs(node.exact-node.solution)/node.solution
-					node.error = absError
-				except:
-					node.error = 0.0
+				if not node.solved:
+					diff += (node.exact-node.solution)**2.
+		diff = diff**(.5)/(self.mesh.numOfyNodes*self.mesh.numOfxNodes)
+		print diff
 
+	"""
+	@Brief Builds and returns the A vector for 2-D Laplace equation
+	"""
 	def __getAMatrix(self):
 		numOfColumns = self.mesh.numOfxNodes-2
 		numOfRows = self.mesh.numOfyNodes-2
@@ -124,6 +129,10 @@ class Physics(object):
 
 		return A
 
+
+	"""
+	@Brief Builds and returns the b vector for 2-D Laplace equation
+	"""
 	def __getbVector(self):
 		B = np.zeros((self.mesh.maxSolIndex,1))
 		for k in xrange(self.mesh.maxSolIndex):
@@ -132,20 +141,12 @@ class Physics(object):
 
 		return B 
 
-
-
-
-
-
-
-
-
-
-
-
-
+	"""
+	@Brief Runs the Gauss-Seidel solver
+	"""
 	def __gaussSeidel(self):
 		diff = 1.0
+		diffs = []
 		iterations = 0
 
 		while diff > self.tol:
@@ -157,11 +158,13 @@ class Physics(object):
 
 			diff = 0.0
 
-			for node in self.mesh.nodes:
-				if not node.solved:
-					diff = diff + abs(node.solution-node.oldSolution)
-
+			for k in xrange(self.mesh.maxSolIndex):
+				node = self.mesh.getNodeBySolIndex(k)
+				diff = diff + abs(node.oldSolution-node.solution)
+			
+			diffs.append(diff)
 			iterations += 1
+		return diffs, iterations
 
 	"""
 	@Brief Sweeps from the top of the domain to the bottom
@@ -174,6 +177,9 @@ class Physics(object):
 				if not node.solved:
 					self.__updateLaplace(node)
 
+	"""
+	@Brief Sweeps from the bottom to the top
+	"""
 	def __sweepBottomUp(self):
 		for i in xrange(self.mesh.numOfxNodes):
 			for j in xrange(self.mesh.numOfyNodes):
@@ -182,6 +188,9 @@ class Physics(object):
 				if not node.solved:
 					self.__updateLaplace(node)
 
+	"""
+	@Brief Sweeps the absolute index
+	"""
 	def __sweepAbsIndex(self):
 		for node in self.mesh.nodes:
 			if not node.solved:

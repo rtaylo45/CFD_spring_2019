@@ -171,6 +171,9 @@ class Mesh(object):
                     k += 1
         self.maxSolIndex = k
 
+    """
+    @Brief Sets the coeffients for the b matrix 
+    """
     def __setNodeSource(self):
         for node in self.nodes:
             source = 0.0
@@ -253,10 +256,12 @@ class Mesh(object):
     """
     @Brief Plots the solution on a contour plot
 
-    @param solution     The soltuion you are trying to plot. 
-                        exact or approx
+    @param solution         The soltuion you are trying to plot. 
+                            exact or approx
+    @param plotType         The plot type either 2d or 3d
+    @param numOfPlotLines   Number of lines in contour plots
     """
-    def plot(self,solution,plotType='2d'):
+    def plot(self,solution="approx",plotType='2d', numOfPlotLines=100):
         x = []
         y = []
         for i in xrange(self.numOfxNodes):
@@ -286,7 +291,7 @@ class Mesh(object):
         
         if plotType=='2d':
 
-            plt.contour(X, Y, Solution,100, cmap='RdGy')
+            plt.contour(X, Y, Solution,numOfPlotLines, cmap='plasma')
             plt.title('2-D Laplace heat equation. Resolution '+str(self.numOfxNodes)+' x '+str(self.numOfyNodes))
             plt.ylabel('y (cm)')
             plt.xlabel('x (cm)')
@@ -297,7 +302,7 @@ class Mesh(object):
 
             fig = plt.figure()
             ax = fig.gca(projection='3d')
-            ax.plot_surface(X,Y,Solution,cmap=plt.cm.rainbow,linewidth=0, antialiased=False)
+            ax.plot_surface(X,Y,Solution,cmap=plt.cm.plasma,linewidth=0, antialiased=False)
             ax.set_xlabel('x (cm)')
             ax.set_ylabel('y (cm)')
             ax.set_zlabel('Temperature (c)')
@@ -375,21 +380,4 @@ class Node(Mesh):
             self.west = node
         else:
             print "Invalid location"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
