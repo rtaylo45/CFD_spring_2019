@@ -3,7 +3,7 @@ import PhysicsType as Phy
 import matplotlib.pyplot as plt
 from math import log
 import time
-start = time.time()
+#start = time.time()
 
 # Builds mesh
 print "Building Mesh"
@@ -26,16 +26,16 @@ problem = Phy.Physics(mesh=mesh, problemType="Laplace")
 
 print "Solving problem"
 # solve the system
-problem.solve(pattern=1)
+problem.solve(solveType=1)
 #iterats = [x for x in xrange(1,iterations+1,1)]
 #diffs = [log(dif) for dif in diffs]
 
 print "plotting solution"
 #mesh.plot2D(solution="exact")
 #mesh.plot(solution="exact",plotType='2d', numOfPlotLines=300)
-#mesh.plot(solution="approx",plotType='2d', numOfPlotLines=300)
-end = time.time()
-print "Program runtime: ",(end - start)
+mesh.plot(solution="approx",plotType='2d', numOfPlotLines=900)
+#end = time.time()
+#print "Program runtime: ",(end - start)
 
 #plt.title('Global Residual vs. iteration')
 #plt.ylabel('log(Residual)')
