@@ -1,2 +1,5 @@
 # Ignores the .pyc files
 *.pyc
+
+# Ignores images
+*.png

@@ -7,13 +7,13 @@ import time
 
 # Builds mesh
 print "Building Mesh"
-mesh = Me.Mesh(xLength=15.0, yLength=20.0, xNodes=121, yNodes=161)
+mesh = Me.Mesh(xLength=15.0, yLength=20.0, xNodes=141, yNodes=181)
 
 print "Setting BC"
 # sets the boundary conditions
 mesh.setBC(side="south", BC=0.)
 mesh.setBC(side="east", BC=0.0)
-mesh.setBC(side="west", BC=0.0)
+mesh.setBC(side="west", BC=50.0)
 mesh.setBC(side="north", BC=100.)
 
 print "Finalizing mesh"
