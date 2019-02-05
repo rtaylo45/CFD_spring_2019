@@ -14,8 +14,6 @@ import numpy as np
 from numpy import linalg as LA
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-import seaborn as sns; sns.set()
-plt.style.use('seaborn-white')
 
 class Mesh(object):
 
@@ -50,12 +48,20 @@ class Mesh(object):
         self.dy = None
         # BC on north side of mesh
         self.northBC = None
+        # BC type on the north side of mesh
+        self.northBCType = None
         # BC on south side of mesh
         self.southBC = None
+        # BC type on the south side of mesh
+        self.southBCType = None
         # BC on east side of mesh
         self.eastBC = None
+        # BC type on the east side of mesh
+        self.eastBCType = None
         # BC on west side of mesh
         self.westBC = None
+        # BC type on the west side of mesh
+        self.westBCType = None
         # Containter that stores the map from mesh to ploting matrix
         self.jMeshToMatrix = None
         # The number of solution nodes
@@ -201,16 +207,21 @@ class Mesh(object):
 
     @param side     Face where BC is applied
     @param BC       The boundary condition value
+    @param BCType   The type of boundary condition being applied
     """
-    def setBC(self, side, BC):
+    def setBC(self, side, BC, BCType=0):
         if side == "north":
             self.northBC = BC
+            self.northBCType = BCType
         elif side == "south":
             self.southBC = BC
+            self.southBCType = BCType
         elif side == "east":
             self.eastBC = BC
+            self.eastBCType = BCType
         elif side == "west":
             self.westBC = BC
+            self.westBCType = BCType
         else:
             print "Invalid BC"
 

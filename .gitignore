@@ -1,5 +1,6 @@
 # Ignores the .pyc files
-*.pyc
-
+*.pyc 
 # Ignores images
-*.png
+*.png 
+# Ignores swap files
+*.swp 
