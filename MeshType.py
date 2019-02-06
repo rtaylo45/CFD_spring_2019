@@ -28,47 +28,49 @@ class Mesh(object):
     def __init__(self, xLength, yLength, xNodes, yNodes):
 
         # Total length in x direction
-        self.xLength = xLength
+		self.xLength = xLength
         # Total length in y direction
-        self.yLength = yLength
+		self.yLength = yLength
         # Total number of nodes in x direction
-        self.numOfxNodes = xNodes
+		self.numOfxNodes = xNodes
         # Total number of nodes in y direction
-        self.numOfyNodes = yNodes
+		self.numOfyNodes = yNodes
         # Total number of mesh nodes
-        self.numOfTotalNodes = xNodes*yNodes
+		self.numOfTotalNodes = xNodes*yNodes
         # List of all the mesh nodes
-        self.nodes = []
+		self.nodes = []
         # List of all the nodes in the solution domain. This doesn't include
         # the boundary nodes
-        self.solNodes = []
+		self.solNodes = []
         # The delta x term
-        self.dx = None
+		self.dx = None
         # The delta y term
-        self.dy = None
+		self.dy = None
         # BC on north side of mesh
-        self.northBC = None
+		self.northBC = None
         # BC type on the north side of mesh
-        self.northBCType = None
+		self.northBCType = None
         # BC on south side of mesh
-        self.southBC = None
+		self.southBC = None
         # BC type on the south side of mesh
-        self.southBCType = None
+		self.southBCType = None
         # BC on east side of mesh
-        self.eastBC = None
+		self.eastBC = None
         # BC type on the east side of mesh
-        self.eastBCType = None
+		self.eastBCType = None
         # BC on west side of mesh
-        self.westBC = None
+		self.westBC = None
         # BC type on the west side of mesh
-        self.westBCType = None
+		self.westBCType = None
         # Containter that stores the map from mesh to ploting matrix
-        self.jMeshToMatrix = None
+		self.jMeshToMatrix = None
         # The number of solution nodes
-        self.maxSolIndex = None
+		self.maxSolIndex = None
+		# The Global error
+		self.globalError = None 
 
-        # builds the geometry
-        self.__buildGeo()
+		# builds the geometry
+		self.__buildGeo()
         
     """
     @Brief Builds the Gemoetry and sets dx and dy
@@ -264,6 +266,40 @@ class Mesh(object):
             return None
         else:
             return self.solNodes[k]
+
+    """
+    @Brief Sets up the A matrix for a 5 point grid
+
+    @param a    Coeff for the North node
+    @param b    Coeff for the East node
+    @param c    Coeff for the current node
+    @param d    Coeff for the West node
+    @param e    Coeff for the South node
+    """
+    def getAMatrix5Point(self, a, b, c, d, e):
+		numOfColumns = self.numOfxNodes-2
+		numOfRows = self.numOfyNodes-2
+		numOfUnknowns = numOfColumns*numOfRows
+		A = np.zeros((numOfUnknowns,numOfUnknowns))
+
+		# diagonal
+		for i in xrange(numOfUnknowns):
+			# main diagonal
+			A[i,i] = c
+
+			# the off off diagonals
+			if i+numOfRows < numOfUnknowns:
+				A[i,i+numOfRows] = e
+			if i+1 > numOfRows:
+				A[i,i-numOfRows] = a
+
+			# the off diagonals
+			if (i+1)%numOfRows:
+				A[i+1,i] = d
+				A[i,i+1] = b
+
+		return A
+
     """
     @Brief Plots the solution on a contour plot
 
@@ -311,15 +347,15 @@ class Mesh(object):
 
         elif plotType=='3d':
 
-            fig = plt.figure()
-            ax = fig.gca(projection='3d')
-            ax.plot_surface(X,Y,Solution,cmap=plt.cm.plasma,linewidth=0, antialiased=False)
-            ax.set_xlabel('x (cm)')
-            ax.set_ylabel('y (cm)')
-            ax.set_zlabel('Temperature (c)')
-            plt.title('2-D Laplace heat equation. Resolution '+str(self.numOfxNodes)+' x '+str(self.numOfyNodes))
+			fig = plt.figure()
+			ax = fig.gca(projection='3d')
+			ax.plot_surface(X,Y,Solution,cmap=plt.cm.plasma,linewidth=0, antialiased=False)
+			ax.set_xlabel('x (cm)')
+			ax.set_ylabel('y (cm)')
+			ax.set_zlabel('Temperature (c)')
+			plt.title('2-D Laplace heat equation. Resolution '+str(self.numOfxNodes)+' x '+str(self.numOfyNodes))
 
-            plt.show()
+			plt.show()
 
     def solveLinalg(self,A,b):
         x = np.linalg.solve(A,b)

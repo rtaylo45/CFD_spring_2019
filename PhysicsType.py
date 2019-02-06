@@ -16,8 +16,7 @@ class Physics(object):
 
     @param Mesh 			The mesh object
     @param problem type		The type of problem we are trying to solve
-
-	"""
+    """
 	def __init__(self, mesh, problemType, solveType=0, tol=1.0e-2):
 		self.mesh = mesh
 		self.problemType = problemType
@@ -28,11 +27,11 @@ class Physics(object):
 		self.__runPreSolve()
 
 	"""
-	@brief Sets the initial guess for the solution
-	"""
+    @brief Sets the initial guess for the solution
+    """
 	def __runPreSolve(self):
 
-		# Solution method is iterative using initial guesses for temperature
+        # Solution method is iterative using initial guesses for temperature
 		if self.solveType==0:
 			for i in xrange(self.mesh.numOfxNodes):
 				for j in xrange(self.mesh.numOfyNodes):
@@ -42,7 +41,7 @@ class Physics(object):
 						node.solution = initialGuess
 	"""
 	@Brief Solves the problem
-	"""
+    """
 	def solve(self,solveType):
 		if solveType==0:
 			diffs, iterations = self.__gaussSeidel()
@@ -97,38 +96,19 @@ class Physics(object):
 				if not node.solved:
 					diff += (node.exact-node.solution)**2.
 		diff = diff**(.5)/(self.mesh.numOfyNodes*self.mesh.numOfxNodes)
-		print diff
+		self.mesh.globalError = float(diff)
 
 	"""
 	@Brief Builds and returns the A vector for 2-D Laplace equation
 	"""
 	def __getAMatrix(self):
-		numOfColumns = self.mesh.numOfxNodes-2
-		numOfRows = self.mesh.numOfyNodes-2
-		A = np.zeros((numOfColumns*numOfRows,numOfRows*numOfColumns))
 
 		alpha = 1./(self.mesh.dx**2.)
 		beta = -(2./(self.mesh.dx**2.) + 2./(self.mesh.dy**2.))
 		gamma = 1./(self.mesh.dy**2.)
 
-		# diagonal
-		for i in xrange(numOfColumns*numOfRows):
-			# main diagonal
-			A[i,i] = beta
-			# the off off diagonals
-			if i-numOfRows<0:
-				pass
-			else:
-				A[i-numOfRows,i] = alpha
-				A[i,i-numOfRows] = alpha
-
-			# the off diagonals
-			if (i+1)%numOfRows:
-				A[i+1,i] = gamma
-				A[i,i+1] = gamma
-
+		A = self.mesh.getAMatrix5Point(gamma,alpha,beta,alpha,gamma)
 		return A
-
 
 	"""
 	@Brief Builds and returns the b vector for 2-D Laplace equation
