@@ -24,7 +24,7 @@ class Physics(object):
 		self.solveType = solveType
 		self.tol = tol
 		self.iterations = 0
-		self.problem = LaType.Laplace(mesh)
+		self.LaplaceObj = LaType.Laplace(mesh)
 
 		self.__runPreSolve()
 
@@ -49,7 +49,7 @@ class Physics(object):
 			diffs, iterations = self.__gaussSeidel()
 			return diffs, iterations
 		elif solveType==1:
-			A = self.__getAMatrix()
+			A = self.__getAMatrix(self.LaplaceObj)
 			b = self.__getbVector()
 
 			solutionVector = self.mesh.solveLinalg(A,b)
@@ -62,7 +62,6 @@ class Physics(object):
 		for k in xrange(self.mesh.maxSolIndex):
 			node = self.mesh.getNodeBySolIndex(k)
 			node.solution = solutionVector[k]
-
 
 	"""
 	@Brief Loops over the mesh and sets the exact soltuion
@@ -103,13 +102,13 @@ class Physics(object):
 	"""
 	@Brief Builds and returns the A vector for 2-D Laplace equation
 	"""
-	def __getAMatrix(self):
+	def __getAMatrix(self, problem):
 
-		a = self.problem.CoeffA
-		b = self.problem.CoeffB
-		c = self.problem.CoeffC
-		d = self.problem.CoeffD
-		e = self.problem.CoeffE
+		a = problem.CoeffA
+		b = problem.CoeffB
+		c = problem.CoeffC
+		d = problem.CoeffD
+		e = problem.CoeffE
 
 		A = self.mesh.getAMatrix5Point(a,b,c,d,e)
 		return A

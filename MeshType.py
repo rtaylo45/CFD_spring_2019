@@ -179,7 +179,6 @@ class Mesh(object):
                     k += 1
         self.maxSolIndex = k
 
-
     """
     @Brief Runs functions prier to solve
     """
@@ -378,7 +377,7 @@ class Node(Mesh):
         self.error = None
         # logical saying if the nodes has been solved or not
         self.solved = False
-        self.source = None
+        self.source = 0.0
 
         # Node connection information
         self.east = None

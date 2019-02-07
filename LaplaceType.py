@@ -38,15 +38,13 @@ class Laplace(object):
 	"""
 	def __setNodeSource(self):
 		for node in self.mesh.nodes:
-			source = 0.0
 			if not node.solved:
+				node.source = 0.0
 				if node.east.solved:
-					source += -node.east.solution/self.mesh.dx**2.
+					node.source += -node.east.solution/self.mesh.dx**2.
 				if node.west.solved:
-					source += -node.west.solution/self.mesh.dx**2.
+					node.source += -node.west.solution/self.mesh.dx**2.
 				if node.north.solved:
-					source += -node.north.solution/self.mesh.dy**2.
+					node.source += -node.north.solution/self.mesh.dy**2.
 				if node.south.solved:
-					source += -node.south.solution/self.mesh.dy**2.
-				node.source = source
-
+					node.source += -node.south.solution/self.mesh.dy**2.
