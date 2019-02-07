@@ -8,6 +8,7 @@ sets the solution.
 """
 import copy
 import numpy as np
+import LaplaceType as LaType
 
 class Physics(object):
 
@@ -23,6 +24,7 @@ class Physics(object):
 		self.solveType = solveType
 		self.tol = tol
 		self.iterations = 0
+		self.problem = LaType.Laplace(mesh)
 
 		self.__runPreSolve()
 
@@ -103,11 +105,13 @@ class Physics(object):
 	"""
 	def __getAMatrix(self):
 
-		alpha = 1./(self.mesh.dx**2.)
-		beta = -(2./(self.mesh.dx**2.) + 2./(self.mesh.dy**2.))
-		gamma = 1./(self.mesh.dy**2.)
+		a = self.problem.CoeffA
+		b = self.problem.CoeffB
+		c = self.problem.CoeffC
+		d = self.problem.CoeffD
+		e = self.problem.CoeffE
 
-		A = self.mesh.getAMatrix5Point(gamma,alpha,beta,alpha,gamma)
+		A = self.mesh.getAMatrix5Point(a,b,c,d,e)
 		return A
 
 	"""
@@ -131,10 +135,7 @@ class Physics(object):
 
 		while diff > self.tol:
 			# Loops through the model
-			if iterations % 2 == 0:
-				self.__sweepTopDown()
-			else:
-				self.__sweepBottomUp()
+			self.__sweepTopDown()
 
 			diff = 0.0
 
@@ -156,27 +157,6 @@ class Physics(object):
 				node.oldSolution = copy.deepcopy(node.solution)
 				if not node.solved:
 					self.__updateLaplace(node)
-
-	"""
-	@Brief Sweeps from the bottom to the top
-	"""
-	def __sweepBottomUp(self):
-		for i in xrange(self.mesh.numOfxNodes):
-			for j in xrange(self.mesh.numOfyNodes):
-				node = self.mesh.getNodeByLoc(i,j)
-				node.oldSolution = copy.deepcopy(node.solution)
-				if not node.solved:
-					self.__updateLaplace(node)
-
-	"""
-	@Brief Sweeps the absolute index
-	"""
-	def __sweepAbsIndex(self):
-		for node in self.mesh.nodes:
-			if not node.solved:
-				self.__updateSolution(node)
-	def __sweepAbsIndexRev(self):
-		pass
 
 	"""
 	@Brief Updates the solution for a sweeping pattern soltuion method
