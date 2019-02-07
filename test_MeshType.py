@@ -21,9 +21,11 @@ def test_BC():
 	mesh.setBC(side="east", BC=25.0)
 	mesh.setBC(side="west", BC=50.0)
 	mesh.setBC(side="north", BC=100.)
-	mesh.finalize()
 
- 	for j in xrange(mesh.numOfyNodes):
+	# Generates the problem around the mesh
+	problem = Phy.Physics(mesh=mesh, problemType="Laplace")
+
+	for j in xrange(mesh.numOfyNodes):
 		for i in xrange(mesh.numOfxNodes):
 
 			node = mesh.getNodeByLoc(i,j)
@@ -40,57 +42,13 @@ def test_BC():
 			# First column. West BC
 			elif i == 0:
 				assert node.solution == 50.0
- 				assert node.solved == True
+				assert node.solved == True
 
 			# Last column. East BC
- 			elif i == mesh.numOfxNodes-1:
+			elif i == mesh.numOfxNodes-1:
 				assert node.solution == 25.0
 				assert node.solved == True
             
 			else:
-				assert node.solution == None
 				assert node.solved == False
 
-def test_HeadDiffusionSmallGrid():
-	
-	# Builds mesh
-	mesh = Mesh(xLength=15.0, yLength=20.0, xNodes=4, yNodes=5)
-	
-	# sets the boundary conditions
-	mesh.setBC(side="south", BC=0., BCType=0)
-	mesh.setBC(side="east", BC=0.0, BCType=0)
-	mesh.setBC(side="west", BC=0.0, BCType=0)
-	mesh.setBC(side="north", BC=100., BCType=0)
-	
-	# Finalize the mesh
-	mesh.finalize()
-	
-	# Generates the problem around the mesh
-	problem = Phy.Physics(mesh=mesh, problemType="Laplace")
-	
-	# solve the system
-	problem.solve(solveType=1)
-
-	assert pytest.approx(mesh.globalError) == 0.08223148
-
-def test_HeadDiffusionMidGrid():
-	
-	# Builds mesh
-	mesh = Mesh(xLength=15.0, yLength=20.0, xNodes=31, yNodes=41)
-	
-	# sets the boundary conditions
-	mesh.setBC(side="south", BC=0., BCType=0)
-	mesh.setBC(side="east", BC=0.0, BCType=0)
-	mesh.setBC(side="west", BC=0.0, BCType=0)
-	mesh.setBC(side="north", BC=100., BCType=0)
-	
-	# Finalize the mesh
-	mesh.finalize()
-	
-	# Generates the problem around the mesh
-	problem = Phy.Physics(mesh=mesh, problemType="Laplace")
-	
-	# solve the system
-	problem.solve(solveType=1)
-
-	assert pytest.approx(mesh.globalError) == 0.00167193766785

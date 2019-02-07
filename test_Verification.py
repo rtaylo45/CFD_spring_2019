@@ -14,9 +14,6 @@ def test_HeatDiffusionSmallGrid():
 	mesh.setBC(side="west", BC=0.0, BCType=0)
 	mesh.setBC(side="north", BC=100., BCType=0)
 	
-	# Finalize the mesh
-	mesh.finalize()
-	
 	# Generates the problem around the mesh
 	problem = Phy.Physics(mesh=mesh, problemType="Laplace")
 	
@@ -34,9 +31,6 @@ def test_HeatDiffusionSmallGrid():
 	mesh.setBC(side="east", BC=0.0, BCType=0)
 	mesh.setBC(side="west", BC=0.0, BCType=0)
 	mesh.setBC(side="north", BC=100., BCType=0)
-	
-	# Finalize the mesh
-	mesh.finalize()
 	
 	# Generates the problem around the mesh
 	problem = Phy.Physics(mesh=mesh, problemType="Laplace")
@@ -58,9 +52,6 @@ def test_HeatDiffusionMidGrid():
 	mesh.setBC(side="west", BC=0.0, BCType=0)
 	mesh.setBC(side="north", BC=100., BCType=0)
 	
-	# Finalize the mesh
-	mesh.finalize()
-	
 	# Generates the problem around the mesh
 	problem = Phy.Physics(mesh=mesh, problemType="Laplace")
 	
@@ -78,9 +69,6 @@ def test_HeatDiffusionMidGrid():
 	mesh.setBC(side="east", BC=0.0, BCType=0)
 	mesh.setBC(side="west", BC=0.0, BCType=0)
 	mesh.setBC(side="north", BC=100., BCType=0)
-	
-	# Finalize the mesh
-	mesh.finalize()
 	
 	# Generates the problem around the mesh
 	problem = Phy.Physics(mesh=mesh, problemType="Laplace")
