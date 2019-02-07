@@ -8,6 +8,7 @@ sets the solution.
 """
 import copy
 import numpy as np
+import LaplaceType as LaType
 
 class Physics(object):
 
@@ -23,6 +24,7 @@ class Physics(object):
 		self.solveType = solveType
 		self.tol = tol
 		self.iterations = 0
+		self.LaplaceObj = LaType.Laplace(mesh)
 
 		self.__runPreSolve()
 
@@ -47,7 +49,7 @@ class Physics(object):
 			diffs, iterations = self.__gaussSeidel()
 			return diffs, iterations
 		elif solveType==1:
-			A = self.__getAMatrix()
+			A = self.__getAMatrix(self.LaplaceObj)
 			b = self.__getbVector()
 
 			solutionVector = self.mesh.solveLinalg(A,b)
@@ -60,7 +62,6 @@ class Physics(object):
 		for k in xrange(self.mesh.maxSolIndex):
 			node = self.mesh.getNodeBySolIndex(k)
 			node.solution = solutionVector[k]
-
 
 	"""
 	@Brief Loops over the mesh and sets the exact soltuion
@@ -101,13 +102,15 @@ class Physics(object):
 	"""
 	@Brief Builds and returns the A vector for 2-D Laplace equation
 	"""
-	def __getAMatrix(self):
+	def __getAMatrix(self, problem):
 
-		alpha = 1./(self.mesh.dx**2.)
-		beta = -(2./(self.mesh.dx**2.) + 2./(self.mesh.dy**2.))
-		gamma = 1./(self.mesh.dy**2.)
+		a = problem.CoeffA
+		b = problem.CoeffB
+		c = problem.CoeffC
+		d = problem.CoeffD
+		e = problem.CoeffE
 
-		A = self.mesh.getAMatrix5Point(gamma,alpha,beta,alpha,gamma)
+		A = self.mesh.getAMatrix5Point(a,b,c,d,e)
 		return A
 
 	"""
@@ -131,10 +134,7 @@ class Physics(object):
 
 		while diff > self.tol:
 			# Loops through the model
-			if iterations % 2 == 0:
-				self.__sweepTopDown()
-			else:
-				self.__sweepBottomUp()
+			self.__sweepTopDown()
 
 			diff = 0.0
 
@@ -156,27 +156,6 @@ class Physics(object):
 				node.oldSolution = copy.deepcopy(node.solution)
 				if not node.solved:
 					self.__updateLaplace(node)
-
-	"""
-	@Brief Sweeps from the bottom to the top
-	"""
-	def __sweepBottomUp(self):
-		for i in xrange(self.mesh.numOfxNodes):
-			for j in xrange(self.mesh.numOfyNodes):
-				node = self.mesh.getNodeByLoc(i,j)
-				node.oldSolution = copy.deepcopy(node.solution)
-				if not node.solved:
-					self.__updateLaplace(node)
-
-	"""
-	@Brief Sweeps the absolute index
-	"""
-	def __sweepAbsIndex(self):
-		for node in self.mesh.nodes:
-			if not node.solved:
-				self.__updateSolution(node)
-	def __sweepAbsIndexRev(self):
-		pass
 
 	"""
 	@Brief Updates the solution for a sweeping pattern soltuion method

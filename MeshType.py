@@ -180,29 +180,11 @@ class Mesh(object):
         self.maxSolIndex = k
 
     """
-    @Brief Sets the coeffients for the b matrix 
-    """
-    def __setNodeSource(self):
-        for node in self.nodes:
-            source = 0.0
-            if not node.solved:
-                if node.east.solved:
-                    source += -node.east.solution/self.dx**2.
-                if node.west.solved:
-                    source += -node.west.solution/self.dx**2.
-                if node.north.solved:
-                    source += -node.north.solution/self.dy**2.
-                if node.south.solved:
-                    source += -node.south.solution/self.dy**2.
-                node.source = source
-
-    """
     @Brief Runs functions prier to solve
     """
     def finalize(self):
         self.__applyBC()
         self.__setSolIndex()
-        self.__setNodeSource()
 
     """
     @Brief Setter for boundary condition
@@ -395,7 +377,7 @@ class Node(Mesh):
         self.error = None
         # logical saying if the nodes has been solved or not
         self.solved = False
-        self.source = None
+        self.source = 0.0
 
         # Node connection information
         self.east = None
