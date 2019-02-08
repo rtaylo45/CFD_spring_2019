@@ -57,9 +57,6 @@ class Physics(object):
 		elif solveType==1:
 			A = self.LaplaceObj.getAMatrix()
 			b = self.LaplaceObj.getbVector()
-			print A.shape
-			print 
-			print b.shape
 
 			solutionVector = self.mesh.solveLinalg(A,b)
 
