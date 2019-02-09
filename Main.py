@@ -12,11 +12,7 @@ print "Setting BC"
 mesh.setBC(side="south", BC=0., BCType=0)
 mesh.setBC(side="east", BC=0.0, BCType=0)
 mesh.setBC(side="west", BC=0.0, BCType=0)
-mesh.setBC(side="north", BC=100., BCType=0)
-
-print "Finalizing mesh"
-# Finalize the mesh
-mesh.finalize()
+mesh.setBC(side="north", BC=1., BCType=0)
 
 print "Setting up problem"
 # Generates the problem around the mesh

@@ -72,8 +72,6 @@ class Mesh(object):
 		# builds the geometry
 		self.__buildGeo()
 		self.__setSolutionIndex()
-
-
         
 	"""
     @Brief Builds the Gemoetry and sets dx and dy

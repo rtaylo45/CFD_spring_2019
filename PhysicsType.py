@@ -9,6 +9,7 @@ sets the solution.
 import copy
 import numpy as np
 import LaplaceType as LaType
+import VorticityType as VortType
 
 class Physics(object):
 
@@ -25,6 +26,7 @@ class Physics(object):
 		self.tol = tol
 		self.iterations = 0
 		self.LaplaceObj = LaType.Laplace(mesh)
+		self.NavierObj = VortType.Vorticity(mesh)
 
 		self.__runPreSolve()
 
@@ -34,6 +36,7 @@ class Physics(object):
 	def __runPreSolve(self):
 	
 		self.LaplaceObj.runPresolve()
+		self.NavierObj.runPresolve()
 
         # Solution method is iterative using initial guesses for temperature
 		if self.solveType==0:
@@ -55,14 +58,17 @@ class Physics(object):
 			diffs, iterations = self.__gaussSeidel()
 			return diffs, iterations
 		elif solveType==1:
-			A = self.LaplaceObj.getAMatrix()
-			b = self.LaplaceObj.getbVector()
+			#A = self.LaplaceObj.getAMatrix()
+			#b = self.LaplaceObj.getbVector()
+			for timeStep in xrange(100):
+				A = self.NavierObj.getAMatrix()
+				b = self.NavierObj.getbVector()	
 
-			solutionVector = self.mesh.solveLinalg(A,b)
+				solutionVector = self.mesh.solveLinalg(A,b)
 
 			self.__unPackSolution(solutionVector)
-		self.__exactLaplace()
-		self.__calcError()
+		#self.__exactLaplace()
+		#self.__calcError()
 
 	def __unPackSolution(self, solutionVector):
 		for k in xrange(self.mesh.maxSolIndex):
