@@ -9,6 +9,7 @@ sets the solution.
 import copy
 import numpy as np
 import LaplaceType as LaType
+import VorticityType as VortType
 
 class Physics(object):
 
@@ -25,6 +26,7 @@ class Physics(object):
 		self.tol = tol
 		self.iterations = 0
 		self.LaplaceObj = LaType.Laplace(mesh)
+		self.NavierObj = VortType.Vorticity(mesh)
 
 		self.__runPreSolve()
 
@@ -32,6 +34,9 @@ class Physics(object):
     @brief Sets the initial guess for the solution
     """
 	def __runPreSolve(self):
+	
+		self.LaplaceObj.runPresolve()
+		self.NavierObj.runPresolve()
 
         # Solution method is iterative using initial guesses for temperature
 		if self.solveType==0:
@@ -41,6 +46,10 @@ class Physics(object):
 					initialGuess = 0.0
 					if not node.solved:
 						node.solution = initialGuess
+						node.Vorticity = initialGuess
+						node.StreamFunct = initialGuess
+						node.xVelocity = initialGuess
+						node.yVelocity = initialGuess
 	"""
 	@Brief Solves the problem
     """
@@ -49,19 +58,40 @@ class Physics(object):
 			diffs, iterations = self.__gaussSeidel()
 			return diffs, iterations
 		elif solveType==1:
-			A = self.__getAMatrix(self.LaplaceObj)
-			b = self.__getbVector()
+			ALap = self.LaplaceObj.getAMatrix()
+			for timeStep in xrange(10):
+				print timeStep
+				bLap = self.LaplaceObj.getbVector()
+				print ALap
+				print bLap
+				print 
 
-			solutionVector = self.mesh.solveLinalg(A,b)
+				solutionVector = self.mesh.solveLinalg(ALap,bLap)
+				self.__unPackSolution(solutionVector,"Psi")
+				print solutionVector
+				print 
 
-			self.__unPackSolution(solutionVector)
-		self.__exactLaplace()
-		self.__calcError()
+				ANav = self.NavierObj.getAMatrix()
+				bNav = self.NavierObj.getbVector()	
+				print ANav
+				print bNav
+				print 
 
-	def __unPackSolution(self, solutionVector):
+				solutionVector = self.mesh.solveLinalg(ANav,bNav)
+				print solutionVector
+				print 
+
+				self.__unPackSolution(solutionVector,"w")
+		#self.__exactLaplace()
+		#self.__calcError()
+
+	def __unPackSolution(self, solutionVector,var):
 		for k in xrange(self.mesh.maxSolIndex):
 			node = self.mesh.getNodeBySolIndex(k)
-			node.solution = solutionVector[k]
+			if var == "Psi":
+				node.StreamFunct = solutionVector[k]
+			if var =="w":
+				node.Vorticity = solutionVector[k]
 
 	"""
 	@Brief Loops over the mesh and sets the exact soltuion
@@ -98,31 +128,6 @@ class Physics(object):
 					diff += (node.exact-node.solution)**2.
 		diff = diff**(.5)/(self.mesh.numOfyNodes*self.mesh.numOfxNodes)
 		self.mesh.globalError = float(diff)
-
-	"""
-	@Brief Builds and returns the A vector for 2-D Laplace equation
-	"""
-	def __getAMatrix(self, problem):
-
-		a = problem.CoeffA
-		b = problem.CoeffB
-		c = problem.CoeffC
-		d = problem.CoeffD
-		e = problem.CoeffE
-
-		A = self.mesh.getAMatrix5Point(a,b,c,d,e)
-		return A
-
-	"""
-	@Brief Builds and returns the b vector for 2-D Laplace equation
-	"""
-	def __getbVector(self):
-		B = np.zeros((self.mesh.maxSolIndex,1))
-		for k in xrange(self.mesh.maxSolIndex):
-			node = self.mesh.getNodeBySolIndex(k)
-			B[k] = node.source
-
-		return B 
 
 	"""
 	@Brief Runs the Gauss-Seidel solver
