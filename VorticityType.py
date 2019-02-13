@@ -94,87 +94,16 @@ class Vorticity(object):
 	"""
 	def __setNodeSource(self):
 		for node in self.mesh.nodes:
-			if not node.solved:
-				node.source += node.Vorticity/self.dt
-				if node.east.solved:
-					node.source += -self.CoeffB*node.east.Vorticity
-				if node.west.solved:
-					node.source += -self.CoeffD*node.west.Vorticity
-				if node.north.solved:
-					node.source += -self.CoeffA*node.north.Vorticity
-				if node.south.solved:
-					node.source += -self.CoeffE*node.south.Vorticity
-
+			pass
 	"""
 	@Brief Loops through the model to update the velocity
 	"""
 	def __updateVelocities(self):
 		for k in xrange(self.mesh.maxSolIndex):
-			node = self.mesh.getNodeBySolIndex(k)
-			u = (node.north.Vorticity-node.south.Vorticity)/(2*self.mesh.dy)
-			v = (node.east.Vorticity-node.west.Vorticity)/(2*self.mesh.dx)
-			node.yVelocity = u
-			node.xVelocity = v
+			pass
 
 	"""
 	@Brief Sets the boundary conditions for each face
 	"""
 	def __applyBC(self):
-	
-		# the velocities at each boundary	
-		vWest = self.mesh.westBC
-		vEast = self.mesh.eastBC
-		uNorth = self.mesh.northBC
-		uSouth = self.mesh.southBC
-
-		for j in xrange(self.mesh.numOfyNodes):
-			for i in xrange(self.mesh.numOfxNodes):
-
-				node = self.mesh.getNodeByLoc(i,j)
-				# First row. South BC
-				if j == 0:
-					temp = ((7*node.Vorticity - 8*node.north.Vorticity - 
-							node.north.north.Vorticity)/(2.*self.mesh.dy**2) +
-							3.*uSouth/self.mesh.dy)
-					print "south", temp
-					node.Vorticity = temp
-					node.StreamFunct = 0.0
-					node.yVelocity = uSouth
-					node.solved = True 
-
-				# Last Row. North BC
-				elif j == self.mesh.numOfyNodes-1:
-					temp = ((7*node.Vorticity - 8*node.south.Vorticity - 
-							node.south.south.Vorticity)/(2.*self.mesh.dy**2) - 
-							3.*uNorth/self.mesh.dy)
-					print "north", temp
-					node.Vorticity = temp
-					node.StreamFunct = 0.0
-					node.yVelocity = uNorth
-					node.solved = True
-
-				# First column. West BC
-				elif i == 0:
-					temp = ((7*node.Vorticity - 8*node.east.Vorticity - 
-							node.east.east.Vorticity)/(2.*self.mesh.dx**2) -
-							3.*vWest/self.mesh.dx)
-					print "west", temp
-					node.Vorticity = temp
-					node.StreamFunct = 0.0
-					node.xVelocity = vWest
-					node.solved = True
-
-				# Last column. East BC
-				elif i == self.mesh.numOfxNodes-1:
-					temp = ((7*node.Vorticity - 8*node.west.Vorticity - 
-							node.west.west.Vorticity)/(2.*self.mesh.dx**2) + 
-							3.*vEast/self.mesh.dx)
-					print "east", temp
-					node.Vorticity = temp
-					node.StreamFunct = 0.0
-					node.xVelocity = vEast
-					node.solved = True
-            
-				else:
-					pass
-
+		pass	

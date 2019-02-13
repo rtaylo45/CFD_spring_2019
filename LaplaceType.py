@@ -60,14 +60,7 @@ class Laplace(object):
 	@Brief Builds and returns the b vector 
 	"""
 	def getbVector(self):
-		self.__setNodeSource
-		B = np.zeros((self.mesh.maxSolIndex,1))
-		for k in xrange(self.mesh.maxSolIndex):
-			node = self.mesh.getNodeBySolIndex(k)
-			B[k] = node.source
-
-		return B 
-
+		pass
 	"""
 	@brief Sets the coefficients for the A matrix
 	"""
@@ -82,23 +75,7 @@ class Laplace(object):
 	@Brief Sets the coeffients for the b matrix 
 	"""
 	def __setNodeSource(self):
-		"""
-		for node in self.mesh.nodes:
-			if not node.solved:
-				node.source = 0.0
-				if node.east.solved:
-					node.source += -node.east.solution/self.mesh.dx**2.
-				if node.west.solved:
-					node.source += -node.west.solution/self.mesh.dx**2.
-				if node.north.solved:
-					node.source += -node.north.solution/self.mesh.dy**2.
-				if node.south.solved:
-					node.source += -node.south.solution/self.mesh.dy**2.
-		"""
-		for node in self.mesh.nodes:
-			if not node.solved:
-				node.source = -node.Vorticity
-				
+		pass	
 	"""
 	@Brief Sets the boundary conditions for each face
 	"""
