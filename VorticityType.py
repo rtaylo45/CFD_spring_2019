@@ -4,6 +4,7 @@ Date: 2/7/19
 
 The Vorticity package used by the physics driver
 """
+import numpy as np
 
 class Vorticity(object):
 
@@ -12,7 +13,7 @@ class Vorticity(object):
 
 	@param Mesh		The Mesh object
 	"""
-	def __init__(self, mesh, dt=0.1, Re=10.0):
+	def __init__(self, mesh, dt=0.000001, Re=100.0):
 		self.mesh = mesh
 		self.dt = dt
 		self.Re = Re
@@ -33,6 +34,7 @@ class Vorticity(object):
 	"""
 	def getAMatrix(self):
 		self.__updateVelocities()
+		self.__applyBC()
 		numOfColumns = self.mesh.numOfxNodes-2
 		numOfRows = self.mesh.numOfyNodes-2
 		numOfUnknowns = numOfColumns*numOfRows
@@ -93,14 +95,22 @@ class Vorticity(object):
 	def __setNodeSource(self):
 		for node in self.mesh.nodes:
 			if not node.solved:
-				node.source = node.solutionVorticity/self.dt
+				node.source += node.Vorticity/self.dt
+				if node.east.solved:
+					node.source += -self.CoeffB*node.east.Vorticity
+				if node.west.solved:
+					node.source += -self.CoeffD*node.west.Vorticity
+				if node.north.solved:
+					node.source += -self.CoeffA*node.north.Vorticity
+				if node.south.solved:
+					node.source += -self.CoeffE*node.south.Vorticity
 
 	"""
 	@Brief Loops through the model to update the velocity
 	"""
 	def __updateVelocities(self):
 		for k in xrange(self.mesh.maxSolIndex):
-			node = self.mesh.getNodeBySolIndex(K)
+			node = self.mesh.getNodeBySolIndex(k)
 			u = (node.north.Vorticity-node.south.Vorticity)/(2*self.mesh.dy)
 			v = (node.east.Vorticity-node.west.Vorticity)/(2*self.mesh.dx)
 			node.yVelocity = u
@@ -124,11 +134,12 @@ class Vorticity(object):
 				# First row. South BC
 				if j == 0:
 					temp = ((7*node.Vorticity - 8*node.north.Vorticity - 
-							node.north.north.Vorticity)/(2.*self.mesh.dy**2) - 
+							node.north.north.Vorticity)/(2.*self.mesh.dy**2) +
 							3.*uSouth/self.mesh.dy)
+					print "south", temp
 					node.Vorticity = temp
 					node.StreamFunct = 0.0
-					node.yVelocity = ySouth
+					node.yVelocity = uSouth
 					node.solved = True 
 
 				# Last Row. North BC
@@ -136,16 +147,18 @@ class Vorticity(object):
 					temp = ((7*node.Vorticity - 8*node.south.Vorticity - 
 							node.south.south.Vorticity)/(2.*self.mesh.dy**2) - 
 							3.*uNorth/self.mesh.dy)
+					print "north", temp
 					node.Vorticity = temp
 					node.StreamFunct = 0.0
-					node.yVelocity = yNorth
+					node.yVelocity = uNorth
 					node.solved = True
 
 				# First column. West BC
 				elif i == 0:
 					temp = ((7*node.Vorticity - 8*node.east.Vorticity - 
-							node.east.east.Vorticity)/(2.*self.mesh.dx**2) + 
+							node.east.east.Vorticity)/(2.*self.mesh.dx**2) -
 							3.*vWest/self.mesh.dx)
+					print "west", temp
 					node.Vorticity = temp
 					node.StreamFunct = 0.0
 					node.xVelocity = vWest
@@ -156,6 +169,7 @@ class Vorticity(object):
 					temp = ((7*node.Vorticity - 8*node.west.Vorticity - 
 							node.west.west.Vorticity)/(2.*self.mesh.dx**2) + 
 							3.*vEast/self.mesh.dx)
+					print "east", temp
 					node.Vorticity = temp
 					node.StreamFunct = 0.0
 					node.xVelocity = vEast

@@ -5,7 +5,7 @@ from math import log
 
 # Builds mesh
 print "Building Mesh"
-mesh = Me.Mesh(xLength=15.0, yLength=20.0, xNodes=31, yNodes=41)
+mesh = Me.Mesh(xLength=1.0, yLength=1.0, xNodes=5, yNodes=5)
 
 print "Setting BC"
 # sets the boundary conditions
@@ -22,10 +22,11 @@ print "Solving problem"
 # solve the system
 problem.solve(solveType=1)
 
-print mesh.globalError
+#print mesh.globalError
 
 print "plotting solution"
-#mesh.plot(solution="approx",plotType='2d', numOfPlotLines=900)
+mesh.plot(solution="Phi",plotType='3d', numOfPlotLines=900)
+mesh.plot(solution="w",plotType='3d', numOfPlotLines=900)
 
 
 

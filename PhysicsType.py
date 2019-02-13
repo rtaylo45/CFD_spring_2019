@@ -58,22 +58,40 @@ class Physics(object):
 			diffs, iterations = self.__gaussSeidel()
 			return diffs, iterations
 		elif solveType==1:
-			#A = self.LaplaceObj.getAMatrix()
-			#b = self.LaplaceObj.getbVector()
-			for timeStep in xrange(100):
-				A = self.NavierObj.getAMatrix()
-				b = self.NavierObj.getbVector()	
+			ALap = self.LaplaceObj.getAMatrix()
+			for timeStep in xrange(10):
+				print timeStep
+				bLap = self.LaplaceObj.getbVector()
+				print ALap
+				print bLap
+				print 
 
-				solutionVector = self.mesh.solveLinalg(A,b)
+				solutionVector = self.mesh.solveLinalg(ALap,bLap)
+				self.__unPackSolution(solutionVector,"Psi")
+				print solutionVector
+				print 
 
-			self.__unPackSolution(solutionVector)
+				ANav = self.NavierObj.getAMatrix()
+				bNav = self.NavierObj.getbVector()	
+				print ANav
+				print bNav
+				print 
+
+				solutionVector = self.mesh.solveLinalg(ANav,bNav)
+				print solutionVector
+				print 
+
+				self.__unPackSolution(solutionVector,"w")
 		#self.__exactLaplace()
 		#self.__calcError()
 
-	def __unPackSolution(self, solutionVector):
+	def __unPackSolution(self, solutionVector,var):
 		for k in xrange(self.mesh.maxSolIndex):
 			node = self.mesh.getNodeBySolIndex(k)
-			node.solution = solutionVector[k]
+			if var == "Psi":
+				node.StreamFunct = solutionVector[k]
+			if var =="w":
+				node.Vorticity = solutionVector[k]
 
 	"""
 	@Brief Loops over the mesh and sets the exact soltuion

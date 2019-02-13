@@ -11,7 +11,7 @@ corners of the domain.
 
 """
 import numpy as np
-from numpy import linalg as LA
+import scipy.sparse.linalg as spla
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
@@ -241,10 +241,12 @@ class Mesh(object):
 			k = 0
 			for i in xrange(0,self.numOfxNodes,1):
 				node = self.getNodeByLoc(i,j)
-				if solution=="approx":
-					Solution[h,k] = node.solution
+				if solution=="Phi":
+					Solution[h,k] = node.StreamFunct
 				elif solution=="exact":
 					Solution[h,k] = node.exact
+				elif solution=="w":
+					Solution[h,k] = node.Vorticity
 				k+= 1
 			h+=1
         
@@ -269,8 +271,14 @@ class Mesh(object):
 
 			plt.show()
 
+	"""
+	@Brief Linear alg solver. Solves Ax=b
+	
+	@param A	A matrix size nxn
+	@param b	b vector size nx1
+	"""
 	def solveLinalg(self,A,b):
-		x = np.linalg.solve(A,b)
+		x, exitCode = spla.gmres(A,b)
 		return x
 
 class Node(Mesh):
@@ -300,13 +308,13 @@ class Node(Mesh):
 		# the approx solution
 		self.solution = None
 		# the vorticity solution
-		self.Vorticity = None
+		self.Vorticity = 0.0
 		# the stream function solution
-		self.StreamFunct = None
+		self.StreamFunct = 0.0
 		# the velocity in x direction
-		self.xVelocity = None
+		self.xVelocity = 0.0
 		# the velocity in the y direction
-		self.yVelocity = None
+		self.yVelocity = 0.0
 		# the old solution
 		self.oldSolution = None
 		# the exact solution
