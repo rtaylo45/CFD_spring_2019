@@ -10,6 +10,7 @@ import copy
 import numpy as np
 import LaplaceType as LaType
 import VorticityType as VortType
+from abc import ABCMeta, abstractmethod
 
 class Physics(object):
 
@@ -34,10 +35,6 @@ class Physics(object):
     @brief Sets the initial guess for the solution
     """
 	def __runPreSolve(self):
-	
-		self.LaplaceObj.runPresolve()
-		self.NavierObj.runPresolve()
-
         # Solution method is iterative using initial guesses for temperature
 		if self.solveType==0:
 			for i in xrange(self.mesh.numOfxNodes):
@@ -46,22 +43,26 @@ class Physics(object):
 					initialGuess = 0.0
 					if not node.solved:
 						node.solution = initialGuess
-						node.Vorticity = initialGuess
-						node.StreamFunct = initialGuess
+						node.VorticitySolution = initialGuess
+						node.LaplaceSolution = initialGuess
 						node.xVelocity = initialGuess
 						node.yVelocity = initialGuess
+
 	"""
 	@Brief Solves the problem
     """
 	def solve(self,solveType):
+		self.LaplaceObj.runPresolve()
+		self.NavierObj.runPresolve()
 		if solveType==0:
 			diffs, iterations = self.__gaussSeidel()
 			return diffs, iterations
 		elif solveType==1:
 			ALap = self.LaplaceObj.getAMatrix()
-			for timeStep in xrange(10):
-				print timeStep
+			for timeStep in xrange(100):
+				print 'timeStep',timeStep
 				bLap = self.LaplaceObj.getbVector()
+				print "Stream Function"
 				print ALap
 				print bLap
 				print 
@@ -73,6 +74,7 @@ class Physics(object):
 
 				ANav = self.NavierObj.getAMatrix()
 				bNav = self.NavierObj.getbVector()	
+				print "Vorticity"
 				print ANav
 				print bNav
 				print 
@@ -89,9 +91,9 @@ class Physics(object):
 		for k in xrange(self.mesh.maxSolIndex):
 			node = self.mesh.getNodeBySolIndex(k)
 			if var == "Psi":
-				node.StreamFunct = solutionVector[k]
+				node.LaplaceSolution = solutionVector[k]
 			if var =="w":
-				node.Vorticity = solutionVector[k]
+				node.VorticitySolution = solutionVector[k]
 
 	"""
 	@Brief Loops over the mesh and sets the exact soltuion

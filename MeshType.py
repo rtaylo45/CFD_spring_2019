@@ -242,18 +242,20 @@ class Mesh(object):
 			for i in xrange(0,self.numOfxNodes,1):
 				node = self.getNodeByLoc(i,j)
 				if solution=="Phi":
-					Solution[h,k] = node.StreamFunct
+					Solution[h,k] = node.LaplaceSolution
+					solTitle = '2-D Stream Function. Resolution '
 				elif solution=="exact":
 					Solution[h,k] = node.exact
 				elif solution=="w":
-					Solution[h,k] = node.Vorticity
+					Solution[h,k] = node.VorticitySolution
+					solTitle = '2-D Vorticity. Resolution '
 				k+= 1
 			h+=1
         
 		if plotType=='2d':
 
 			plt.contour(X, Y, Solution,numOfPlotLines, cmap='plasma')
-			plt.title('2-D Laplace heat equation. Resolution '+str(self.numOfxNodes)+' x '+str(self.numOfyNodes))
+			plt.title(solTitle +str(self.numOfxNodes)+' x '+str(self.numOfyNodes))
 			plt.ylabel('y (cm)')
 			plt.xlabel('x (cm)')
 			plt.colorbar()
@@ -308,9 +310,9 @@ class Node(Mesh):
 		# the approx solution
 		self.solution = None
 		# the vorticity solution
-		self.Vorticity = 0.0
+		self.VorticitySolution = 0.0
 		# the stream function solution
-		self.StreamFunct = 0.0
+		self.LaplaceSolution = 0.0
 		# the velocity in x direction
 		self.xVelocity = 0.0
 		# the velocity in the y direction
@@ -323,7 +325,12 @@ class Node(Mesh):
 		self.error = None
         # logical saying if the nodes has been solved or not
 		self.solved = False
+		# General Source 
 		self.source = 0.0
+		# Stream function source
+		self.LaplacSource = 0.0
+		# Vorticity source
+		self.VorticitySource = 0.0
 
         # Node connection information
 		self.east = None
