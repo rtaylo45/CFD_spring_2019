@@ -42,21 +42,16 @@ class Laplace(object):
 
 	@param side     Face where BC is applied
 	@param BC       The boundary condition value
-	@param BCType   The type of boundary condition being applied
 	"""
 	def setBC(self, side, BC, BCType=0):
 		if side == "north":
 			self.northBC = BC
-			self.northBCType = BCType
 		elif side == "south":
 			self.southBC = BC
-			self.southBCType = BCType
 		elif side == "east":
 			self.eastBC = BC
-			self.eastBCType = BCType
 		elif side == "west":
 			self.westBC = BC
-			self.westBCType = BCType
 		else:
 			print "Invalid BC"
 
@@ -64,14 +59,13 @@ class Laplace(object):
 	@brief runs the presolve to apply BC
 	"""
 	def runPresolve(self):
-		self.__applyBC()
-		self.__setACoefficients()
-		self.__setNodeSource()
+		pass
 
 	"""
 	@Brief Sets up the A matrix for a 5 point grid
 	"""
 	def getAMatrix(self):
+		self.__setACoefficients()
 		numOfColumns = self.mesh.numOfxNodes-2
 		numOfRows = self.mesh.numOfyNodes-2
 		numOfUnknowns = numOfColumns*numOfRows
@@ -84,14 +78,16 @@ class Laplace(object):
 
 			# the off off diagonals
 			if i+numOfRows < numOfUnknowns:
-				A[i,i+numOfRows] = self.CoeffE
+				A[i,i+numOfRows] = self.CoeffB
 			if i+1 > numOfRows:
-				A[i,i-numOfRows] = self.CoeffA
+				A[i,i-numOfRows] = self.CoeffD
 
 			# the off diagonals
 			if (i+1)%numOfRows:
-				A[i+1,i] = self.CoeffD
-				A[i,i+1] = self.CoeffB
+				A[i,i+1] = self.CoeffA
+			
+			if (i)%(numOfRows):
+				A[i,i-1] = self.CoeffE
 
 		return A
 
@@ -99,11 +95,10 @@ class Laplace(object):
 	@Brief Builds and returns the b vector 
 	"""
 	def getbVector(self):
-		self.__setNodeSource()
 		b = np.zeros((self.mesh.maxSolIndex,1))
 		for k in xrange(self.mesh.maxSolIndex):
 			node = self.mesh.getNodeBySolIndex(k)
-			b[k] = node.LaplaceSource
+			b[k] = -node.VorticitySolution
 		return b
 			
 	"""
@@ -115,23 +110,6 @@ class Laplace(object):
 		self.CoeffC = -(2./(self.mesh.dx**2.) + 2./(self.mesh.dy**2.))
 		self.CoeffD = 1./(self.mesh.dx**2.)
 		self.CoeffE = 1./(self.mesh.dy**2.)
-
-	"""
-	@Brief Sets the coeffients for the b matrix 
-	"""
-	def __setNodeSource(self):
-		for k in xrange(self.mesh.maxSolIndex):
-			node = self.mesh.getNodeBySolIndex(k)
-			node.LaplaceSource = -node.VorticitySolution
-
-			if node.south.solved:
-				node.LaplaceSource += node.south.LaplaceSolution*self.CoeffD
-			if node.north.solved:
-				node.LaplaceSource += node.north.LaplaceSolution*self.CoeffA
-			if node.east.solved:
-				node.LaplaceSource += node.east.LaplaceSolution*self.CoeffB
-			if node.west.solved:
-				node.LaplaceSource += node.west.LaplaceSolution*self.CoeffD
 		
 	"""
 	@Brief Sets the boundary conditions for each face
