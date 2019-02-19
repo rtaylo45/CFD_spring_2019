@@ -10,6 +10,7 @@ import copy
 import numpy as np
 import LaplaceType as LaType
 import VorticityType as VortType
+from math import log10
 
 class Physics(object):
 
@@ -19,115 +20,98 @@ class Physics(object):
     @param Mesh 			The mesh object
     @param problem type		The type of problem we are trying to solve
     """
-	def __init__(self, mesh, problemType, solveType=0, tol=1.0e-2):
+	def __init__(self, mesh, dt, Re, solveType=0, tol=1.0e-2):
 		self.mesh = mesh
-		self.problemType = problemType
 		self.solveType = solveType
 		self.tol = tol
 		self.iterations = 0
 		self.LaplaceObj = LaType.Laplace(mesh)
-		self.NavierObj = VortType.Vorticity(mesh)
+		self.NavierObj = VortType.Vorticity(mesh, dt, Re)
 
-		self.__runPreSolve()
-
-	"""
-    @brief Sets the initial guess for the solution
-    """
-	def __runPreSolve(self):
-	
-		self.LaplaceObj.runPresolve()
-		self.NavierObj.runPresolve()
-
-        # Solution method is iterative using initial guesses for temperature
-		if self.solveType==0:
-			for i in xrange(self.mesh.numOfxNodes):
-				for j in xrange(self.mesh.numOfyNodes):
-					node = self.mesh.getNodeByLoc(i,j)
-					initialGuess = 0.0
-					if not node.solved:
-						node.solution = initialGuess
-						node.Vorticity = initialGuess
-						node.StreamFunct = initialGuess
-						node.xVelocity = initialGuess
-						node.yVelocity = initialGuess
 	"""
 	@Brief Solves the problem
     """
 	def solve(self,solveType):
+
 		if solveType==0:
 			diffs, iterations = self.__gaussSeidel()
 			return diffs, iterations
+
 		elif solveType==1:
+			timeSteps = []
+			lapDiffs = []
+			navDiffs = []
+			timeStep = 0
+			time = 0.0
+			diff = 0.0
 			ALap = self.LaplaceObj.getAMatrix()
-			for timeStep in xrange(10):
-				print timeStep
+			while diff > -8.0:
+				time = float(timeStep)*self.NavierObj.dt
+				timeSteps.append(timeStep)
 				bLap = self.LaplaceObj.getbVector()
-				print ALap
-				print bLap
-				print 
+				#print ALap
+				#print
+				#print bLap
+				#print
+			
+				solLap = self.mesh.solveLinalg(ALap,bLap)
+				#print solLap
+				#print
+			
+				self.__unPackSolution(solLap,'Lap')
 
-				solutionVector = self.mesh.solveLinalg(ALap,bLap)
-				self.__unPackSolution(solutionVector,"Psi")
-				print solutionVector
-				print 
-
+				self.NavierObj.upDateBC()
+				self.NavierObj.updateVelocities()
 				ANav = self.NavierObj.getAMatrix()
-				bNav = self.NavierObj.getbVector()	
-				print ANav
-				print bNav
-				print 
+				bNav = self.NavierObj.getbVector()
+				lapDiffs.append(self.__calcDiff('Lap'))
+				#print ANav
+				#print
+				#print bNav
+				#print
 
-				solutionVector = self.mesh.solveLinalg(ANav,bNav)
-				print solutionVector
+				solNav = self.mesh.solveLinalg(ANav,bNav)
+				#print solNav
+				#print 
+				self.__unPackSolution(solNav, "Vor")
+				print time, log10(self.__calcDiff('Lap') + self.__calcDiff('Vor'))
+				diff =  log10(self.__calcDiff('Lap') + self.__calcDiff('Vor'))
 				print 
+				navDiffs.append(self.__calcDiff('Vor'))
+				timeStep += 1
 
-				self.__unPackSolution(solutionVector,"w")
+		return timeSteps, lapDiffs, navDiffs
+			
 		#self.__exactLaplace()
 		#self.__calcError()
 
 	def __unPackSolution(self, solutionVector,var):
 		for k in xrange(self.mesh.maxSolIndex):
 			node = self.mesh.getNodeBySolIndex(k)
-			if var == "Psi":
-				node.StreamFunct = solutionVector[k]
-			if var =="w":
-				node.Vorticity = solutionVector[k]
-
-	"""
-	@Brief Loops over the mesh and sets the exact soltuion
-	"""
-	def __exactLaplace(self):
-		h = self.mesh.yLength
-		w = self.mesh.xLength
-		n = 101
-
-		for i in xrange(self.mesh.numOfxNodes):
-			for j in xrange(self.mesh.numOfyNodes):
-				node = self.mesh.getNodeByLoc(i,j)
-				x = node.x
-				y = node.y
-				exact = 0.0
-
-				for k in xrange(1,n+1,2):
-					temp = np.sinh(k*np.pi*y/w)
-					temp1 = np.sin(k*np.pi*x/w)
-					temp2 = 1./(k*np.sinh(k*np.pi*h/w))
-					exact += temp*temp1*temp2
-				exact = exact*400./np.pi
-				node.exact = exact
+			if var == "Lap":
+				node.oldLaplaceSolution = node.LaplaceSolution
+				node.LaplaceSolution = solutionVector[k]
+			if var =="Vor":
+				node.oldVorticitySolution = node.VorticitySolution
+				node.VorticitySolution = solutionVector[k]
 
 	"""
 	@Brief Loops over the mesh to set the error between exacpt and approx
 	"""
-	def __calcError(self):
+	def __calcDiff(self,sol):
 		diff = 0.0
 		for i in xrange(self.mesh.numOfxNodes):
 			for j in xrange(self.mesh.numOfyNodes):
 				node = self.mesh.getNodeByLoc(i,j)
 				if not node.solved:
-					diff += (node.exact-node.solution)**2.
+					if sol == 'Lap':
+						diff += (node.oldLaplaceSolution-
+						node.LaplaceSolution)**2.
+					elif sol =='Vor':
+						diff += (node.oldVorticitySolution -
+						node.VorticitySolution)**2.
 		diff = diff**(.5)/(self.mesh.numOfyNodes*self.mesh.numOfxNodes)
-		self.mesh.globalError = float(diff)
+		return float(diff)
 
 	"""
 	@Brief Runs the Gauss-Seidel solver

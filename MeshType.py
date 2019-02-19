@@ -12,7 +12,9 @@ corners of the domain.
 """
 import numpy as np
 import scipy.sparse.linalg as spla
+from scipy import sparse as sp
 import matplotlib.pyplot as plt
+from math import log10
 from mpl_toolkits.mplot3d import Axes3D
 
 class Mesh(object):
@@ -220,7 +222,7 @@ class Mesh(object):
 	@param plotType         The plot type either 2d or 3d
 	@param numOfPlotLines   Number of lines in contour plots
 	"""
-	def plot(self,solution="approx",plotType='2d', numOfPlotLines=100):
+	def plot(self,solution="approx",plotType='2d', dt=0.0, Re=0.0):
 		x = []
 		y = []
 		for i in xrange(self.numOfxNodes):
@@ -242,22 +244,33 @@ class Mesh(object):
 			for i in xrange(0,self.numOfxNodes,1):
 				node = self.getNodeByLoc(i,j)
 				if solution=="Phi":
-					Solution[h,k] = node.StreamFunct
+					Solution[h,k] = node.LaplaceSolution
+					solTitle = '2-D Stream Function. Resolution '
+					saveTitle = 'StreamFunctionRe'+str(Re)+'dt'+str(dt) +'Resolution'
+					levels = [-1.0e-10,-1.0e-7,-1.0e-5,-1.0e-4,-0.01,
+					-0.03,-0.05,-0.07,-0.09,-0.1,-0.11,-0.115,-0.1175,
+					1.0e-8,1.0e-7,1.0e-6,1.0e-5,1.0e-4,2.5e-4,5.0e-4,
+					1.0e-3,1.5e-3,3.0e-3]
 				elif solution=="exact":
 					Solution[h,k] = node.exact
 				elif solution=="w":
-					Solution[h,k] = node.Vorticity
+					Solution[h,k] = node.VorticitySolution
+					solTitle = '2-D Vorticity. Resolution '
+					saveTitle = 'VorticityRe'+str(Re)+'dt'+str(dt) +'Resolution'
+					levels = [-3.0,-2.0,-1.0,-0.5,0.0,0.5,1.0,2.0,3.0,4.0,5.0]
 				k+= 1
 			h+=1
         
 		if plotType=='2d':
 
-			plt.contour(X, Y, Solution,numOfPlotLines, cmap='plasma')
-			plt.title('2-D Laplace heat equation. Resolution '+str(self.numOfxNodes)+' x '+str(self.numOfyNodes))
-			plt.ylabel('y (cm)')
-			plt.xlabel('x (cm)')
-			plt.colorbar()
-			plt.show()
+			cp = plt.contour(X, Y, Solution, sorted(levels), cmap='tab20')
+			plt.title(solTitle +str(self.numOfxNodes)+' x '+str(self.numOfyNodes))
+			plt.ylabel('y')
+			plt.xlabel('x')
+			plt.colorbar(cp)
+			plt.savefig(saveTitle +str(self.numOfxNodes)+'x'+str(self.numOfyNodes)+'.png')
+			plt.close()
+			#plt.show()
 
 		elif plotType=='3d':
 
@@ -278,7 +291,10 @@ class Mesh(object):
 	@param b	b vector size nx1
 	"""
 	def solveLinalg(self,A,b):
-		x, exitCode = spla.gmres(A,b)
+		A_ = sp.csc_matrix(A)
+		M2 = spla.spilu(A_)
+		M = spla.LinearOperator(A_.shape, M2.solve)
+		x, exitCode = spla.gmres(A_,b,M=M)
 		return x
 
 class Node(Mesh):
@@ -308,13 +324,17 @@ class Node(Mesh):
 		# the approx solution
 		self.solution = None
 		# the vorticity solution
-		self.Vorticity = 0.0
+		self.VorticitySolution = 0.0
 		# the stream function solution
-		self.StreamFunct = 0.0
+		self.LaplaceSolution = 0.0
+		# the vorticity solution
+		self.oldVorticitySolution = 0.0
+		# the stream function solution
+		self.oldLaplaceSolution = 0.0
 		# the velocity in x direction
-		self.xVelocity = 0.0
+		self.uVelocity = 0.0
 		# the velocity in the y direction
-		self.yVelocity = 0.0
+		self.vVelocity = 0.0
 		# the old solution
 		self.oldSolution = None
 		# the exact solution
@@ -323,7 +343,12 @@ class Node(Mesh):
 		self.error = None
         # logical saying if the nodes has been solved or not
 		self.solved = False
+		# General Source 
 		self.source = 0.0
+		# Stream function source
+		self.LaplacSource = 0.0
+		# Vorticity source
+		self.VorticitySource = 0.0
 
         # Node connection information
 		self.east = None
