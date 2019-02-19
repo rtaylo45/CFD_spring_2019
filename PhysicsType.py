@@ -8,6 +8,8 @@ sets the solution.
 """
 import copy
 import numpy as np
+import scipy.sparse.linalg as spla
+from scipy import sparse as sp
 import LaplaceType as LaType
 import VorticityType as VortType
 from math import log10
@@ -44,36 +46,29 @@ class Physics(object):
 			timeStep = 0
 			time = 0.0
 			diff = 0.0
+
 			ALap = self.LaplaceObj.getAMatrix()
-			while diff > -8.0:
+			ALapCSC = sp.csc_matrix(ALap)
+
+			while diff > -6.0:
 				time = float(timeStep)*self.NavierObj.dt
 				timeSteps.append(timeStep)
 				bLap = self.LaplaceObj.getbVector()
-				#print ALap
-				#print
-				#print bLap
-				#print
 			
-				solLap = self.mesh.solveLinalg(ALap,bLap)
-				#print solLap
-				#print
+				solLap = self.mesh.solveLinalg(ALap,bLap,A_=ALapCSC)
 			
 				self.__unPackSolution(solLap,'Lap')
 
 				self.NavierObj.upDateBC()
 				self.NavierObj.updateVelocities()
+
 				ANav = self.NavierObj.getAMatrix()
 				bNav = self.NavierObj.getbVector()
 				lapDiffs.append(self.__calcDiff('Lap'))
-				#print ANav
-				#print
-				#print bNav
-				#print
 
 				solNav = self.mesh.solveLinalg(ANav,bNav)
-				#print solNav
-				#print 
 				self.__unPackSolution(solNav, "Vor")
+
 				print time, log10(self.__calcDiff('Lap') + self.__calcDiff('Vor'))
 				diff =  log10(self.__calcDiff('Lap') + self.__calcDiff('Vor'))
 				print 

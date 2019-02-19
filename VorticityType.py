@@ -137,42 +137,46 @@ class Vorticity(object):
 		vNorth = self.northBC
 		vSouth = self.southBC
 
-		for i in xrange(self.mesh.numOfxNodes):
-			for j in xrange(self.mesh.numOfyNodes):
-				node = self.mesh.getNodeByLoc(i,j)
+		for j in xrange(self.mesh.numOfyNodes):
 			
-				# west BC	
-				if i == 0:
-					vort = ((7.*node.LaplaceSolution - 
-					8.*node.east.LaplaceSolution + 
-					node.east.east.LaplaceSolution)/(2.*self.mesh.dx**2.))	
-					node.VorticitySolution = vort
-					node.solved = True
+			# west BC	
+			i = 0
+			node = self.mesh.getNodeByLoc(i,j)
+			vort = ((7.*node.LaplaceSolution - 
+			8.*node.east.LaplaceSolution + 
+			node.east.east.LaplaceSolution)/(2.*self.mesh.dx**2.))	
+			node.VorticitySolution = vort
+			node.solved = True
 
-				# east BC
-				if i == (self.mesh.numOfxNodes-1):
-					vort = ((7.*node.LaplaceSolution - 
-					8.*node.west.LaplaceSolution + 
-					node.west.west.LaplaceSolution)/(2.*self.mesh.dx**2.))	
-					node.VorticitySolution = vort
-					node.solved = True
+			# east BC
+			i = (self.mesh.numOfxNodes-1)
+			node = self.mesh.getNodeByLoc(i,j)
+			vort = ((7.*node.LaplaceSolution - 
+			8.*node.west.LaplaceSolution + 
+			node.west.west.LaplaceSolution)/(2.*self.mesh.dx**2.))	
+			node.VorticitySolution = vort
+			node.solved = True
 						
-				# south BC	
-				if j == 0:
-					vort = ((7.*node.LaplaceSolution - 
-					8.*node.north.LaplaceSolution + 
-					node.north.north.LaplaceSolution)/(2.*self.mesh.dy**2.))	
-					node.VorticitySolution = vort
-					node.solved = True
+		for i in xrange(self.mesh.numOfxNodes):
 
-				# north BC
-				if j == (self.mesh.numOfyNodes-1):
-					vort = ((7.*node.LaplaceSolution - 
-					8.*node.south.LaplaceSolution + 
-					node.south.south.LaplaceSolution)/(2.*(self.mesh.dy**2.))
-					- 3.*vNorth/(self.mesh.dy))	
-					node.VorticitySolution = vort
-					node.solved = True
+			# south BC	
+			j = 0
+			node = self.mesh.getNodeByLoc(i,j)
+			vort = ((7.*node.LaplaceSolution - 
+			8.*node.north.LaplaceSolution + 
+			node.north.north.LaplaceSolution)/(2.*self.mesh.dy**2.))	
+			node.VorticitySolution = vort
+			node.solved = True
+
+			# north BC
+			j = (self.mesh.numOfyNodes-1)
+			node = self.mesh.getNodeByLoc(i,j)
+			vort = ((7.*node.LaplaceSolution - 
+			8.*node.south.LaplaceSolution + 
+			node.south.south.LaplaceSolution)/(2.*(self.mesh.dy**2.))
+			- 3.*vNorth/(self.mesh.dy))	
+			node.VorticitySolution = vort
+			node.solved = True
 
 
 
