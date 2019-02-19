@@ -6,8 +6,8 @@ from math import log10
 # Builds mesh
 print "Building Mesh"
 mesh = Me.Mesh(xLength=1.0, yLength=1.0, xNodes=101, yNodes=101)
-dt = 0.001
-Re = 100.0
+dt = 0.0001
+Re = 500.0
 
 print "Setting up problem"
 # Generates the problem around the mesh

@@ -11,6 +11,7 @@ corners of the domain.
 
 """
 import numpy as np
+import time
 import scipy.sparse.linalg as spla
 from scipy import sparse as sp
 import matplotlib.pyplot as plt
@@ -290,11 +291,11 @@ class Mesh(object):
 	@param A	A matrix size nxn
 	@param b	b vector size nx1
 	"""
-	def solveLinalg(self,A,b):
-		A_ = sp.csc_matrix(A)
-		M2 = spla.spilu(A_)
-		M = spla.LinearOperator(A_.shape, M2.solve)
-		x, exitCode = spla.gmres(A_,b,M=M)
+	def solveLinalg(self,A,b,A_=None):
+		if A_==None:
+			A_ = sp.csc_matrix(A)
+		x, exitCode = spla.gcrotmk(A_,b)
+		end = time.time()
 		return x
 
 class Node(Mesh):
