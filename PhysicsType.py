@@ -42,8 +42,7 @@ class Physics(object):
 
 		elif solveType==1:
 			timeSteps = []
-			lapDiffs = []
-			navDiffs = []
+			diffs = []
 			timeStep = 0
 			time = 0.0
 			diff = 0.0
@@ -53,10 +52,9 @@ class Physics(object):
 				timeSteps.append(timeStep)
 				
 				# builds the super matrix
-				S, BLap, ALap, DNav, CNav = self.__buildSuperMatrix()
+				S = self.__buildSuperMatrix()
 				# builds the super b vector
 				b = self.__buildSuperbVector()
-				#print b
 				# solves the system
 				sol = self.mesh.solveLinalg(S,b)
 			
@@ -64,11 +62,11 @@ class Physics(object):
 
 				print time, log10(self.__calcDiff('Lap') + self.__calcDiff('Vor'))
 				diff =  log10(self.__calcDiff('Lap') + self.__calcDiff('Vor'))
+				diffs.append(diff)
 				print 
-				navDiffs.append(self.__calcDiff('Vor'))
 				timeStep += 1
 
-		return S,b, BLap, ALap, DNav, CNav
+		return timeSteps, diffs
 			
 	def __unPackSolution(self, solutionVector):
 		numOfColumns = self.mesh.numOfxNodes
@@ -101,59 +99,6 @@ class Physics(object):
 						node.VorticitySolution)**2.
 		diff = diff**(.5)/(self.mesh.numOfyNodes*self.mesh.numOfxNodes)
 		return float(diff)
-
-	"""
-	@Brief Runs the Gauss-Seidel solver
-	"""
-	def __gaussSeidel(self):
-		diff = 1.0
-		diffs = []
-		iterations = 0
-
-		while diff > self.tol:
-			# Loops through the model
-			self.__sweepTopDown()
-
-			diff = 0.0
-
-			for k in xrange(self.mesh.maxSolIndex):
-				node = self.mesh.getNodeBySolIndex(k)
-				diff = diff + abs(node.oldSolution-node.solution)
-			
-			diffs.append(diff)
-			iterations += 1
-		return diffs, iterations
-
-	"""
-	@Brief Sweeps from the top of the domain to the bottom
-	"""
-	def __sweepTopDown(self):
-		for i in xrange(self.mesh.numOfxNodes-1,-1,-1):
-			for j in xrange(self.mesh.numOfyNodes):
-				node = self.mesh.getNodeByLoc(i,j)
-				node.oldSolution = copy.deepcopy(node.solution)
-				if not node.boundary:
-					self.__updateLaplace(node)
-
-	"""
-	@Brief Updates the solution for a sweeping pattern soltuion method
-
-	@param node 	mesh node object
-	"""
-	def __updateLaplace(self,node):
-		dx = self.mesh.dx
-		dy = self.mesh.dy
-		Te = node.east.solution
-		Tw = node.west.solution
-		Tn = node.north.solution
-		Ts = node.south.solution
-
-		temp1 = (2./dx**2. + 2./dy**2.)
-		xcontribution = (Te+Tw)/(dx**2.)
-		ycontribution = (Tn+Ts)/(dy**2.)
-
-		node.solution = (1./temp1)*(xcontribution+ycontribution)
-
 
 	"""
 	@Brief Builds the big matrix used to for unsegregated solver
@@ -202,7 +147,7 @@ class Physics(object):
 		#plt.spy(SMatrix)
 		#plt.show()
 
-		return SMatrix, BLap, ALap, DNav, CNav
+		return SMatrix
 		
 
 	"""

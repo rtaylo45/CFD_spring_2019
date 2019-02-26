@@ -38,30 +38,6 @@ class Laplace(object):
 		self.westBCType = None
 
 	"""
-	@Brief Setter for boundary condition
-
-	@param side     Face where BC is applied
-	@param BC       The boundary condition value
-	"""
-	def setBC(self, side, BC, BCType=0):
-		if side == "north":
-			self.northBC = BC
-		elif side == "south":
-			self.southBC = BC
-		elif side == "east":
-			self.eastBC = BC
-		elif side == "west":
-			self.westBC = BC
-		else:
-			print "Invalid BC"
-
-	"""
-	@brief runs the presolve to apply BC
-	"""
-	def runPresolve(self):
-		pass
-
-	"""
 	@Brief Sets up the A matrix for a 5 point grid
 	"""
 	def getAMatrix(self):
@@ -132,34 +108,4 @@ class Laplace(object):
 		self.CoeffD = 1./(self.mesh.dx**2.)
 		self.CoeffE = 1./(self.mesh.dy**2.)
 		
-	"""
-	@Brief Sets the boundary conditions for each face
-	"""
-	def applyBC(self):
-		for j in xrange(self.mesh.numOfyNodes):
-			for i in xrange(self.mesh.numOfxNodes):
-
-				node = self.mesh.getNodeByLoc(i,j)
-				# First row. South BC
-				if j == 0:
-					node.LaplaceSolution = self.southBC 
-					node.boundary = True 
-
-				# Last Row. North BC
-				elif j == self.mesh.numOfyNodes-1:
-					node.LaplaceSolution = self.northBC
-					node.boundary = True
-
-				# First column. West BC
-				elif i == 0:
-					node.LaplaceSolution = self.westBC
-					node.boundary = True
-
-				# Last column. East BC
-				elif i == self.mesh.numOfxNodes-1:
-					node.LaplaceSolution = self.eastBC
-					node.boundary = True
-            
-				else:
-					pass
 

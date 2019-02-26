@@ -28,24 +28,6 @@ class Vorticity(object):
 		self.westBC = None
 
 	"""
-	@Brief Setter for boundary condition
-
-	@param side     Face where BC is applied
-	@param BC       The boundary condition value
-	"""
-	def setBC(self, side, BC, BCType=0):
-		if side == "north":
-			self.northBC = BC
-		elif side == "south":
-			self.southBC = BC
-		elif side == "east":
-			self.eastBC = BC
-		elif side == "west":
-			self.westBC = BC
-		else:
-			print "Invalid BC"
-
-	"""
     @Brief Sets up the A matrix for a 5 point grid
 	"""
 	def getAMatrix(self):
@@ -179,18 +161,4 @@ class Vorticity(object):
 
 					node.vVelocity = -((node.west.LaplaceSolution -
 					node.east.LaplaceSolution)/(2.*self.mesh.dx))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

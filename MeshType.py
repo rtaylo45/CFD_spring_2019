@@ -302,9 +302,8 @@ class Mesh(object):
 			plt.ylabel('y')
 			plt.xlabel('x')
 			plt.colorbar(cp)
-			#plt.savefig(saveTitle +str(self.numOfxNodes)+'x'+str(self.numOfyNodes)+'.png')
-			#plt.close()
-			plt.show()
+			plt.savefig(saveTitle +str(self.numOfxNodes)+'x'+str(self.numOfyNodes)+'.png')
+			plt.close()
 
 		elif plotType=='3d':
 
@@ -326,9 +325,10 @@ class Mesh(object):
 	"""
 	def solveLinalg(self,A,b,A_=None):
 		start = time.time()
-		if A_==None:
-			A_ = sp.csc_matrix(A)
-		x, exitCode = spla.gcrotmk(A_,b)
+		#if A_==None:
+			#A_ = sp.csc_matrix(A)
+		#x, exitCode = spla.gcrotmk(A_,b)
+		x = np.linalg.solve(A,b)
 		end = time.time()
 		print end-start
 		return x
