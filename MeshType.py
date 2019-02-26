@@ -75,6 +75,7 @@ class Mesh(object):
 		# builds the geometry
 		self.__buildGeo()
 		self.__setSolutionIndex()
+		self.__setBoundaries()
         
 	"""
     @Brief Builds the Gemoetry and sets dx and dy
@@ -175,6 +176,37 @@ class Mesh(object):
 			print "Invalid BC"
 
 	"""
+	@Brief Sets the boundaries
+	"""
+	def __setBoundaries(self):
+		for j in xrange(self.numOfyNodes):
+			# west BC	
+			i = 0
+			node = self.getNodeByLoc(i,j)
+			node.boundary = True
+			node.boundaryLoc = 'west'
+
+			# east BC
+			i = (self.numOfxNodes-1)
+			node = self.getNodeByLoc(i,j)
+			node.boundary = True
+			node.boundaryLoc = 'east'
+						
+		for i in xrange(self.numOfxNodes):
+			# south BC	
+			j = 0
+			node = self.getNodeByLoc(i,j)
+			node.boundary = True
+			node.boundaryLoc = 'south'
+
+			# north BC
+			j = (self.numOfyNodes-1)
+			node = self.getNodeByLoc(i,j)
+			node.boundary = True
+			node.boundaryLoc = 'north'
+		
+
+	"""
 	@Brief Returns node object 
 
 	@param i    x index
@@ -264,14 +296,15 @@ class Mesh(object):
         
 		if plotType=='2d':
 
-			cp = plt.contour(X, Y, Solution, sorted(levels), cmap='tab20')
+			#cp = plt.contour(X, Y, Solution, sorted(levels), cmap='tab20')
+			cp = plt.contour(X, Y, Solution,levels=sorted(levels), cmap='tab20')
 			plt.title(solTitle +str(self.numOfxNodes)+' x '+str(self.numOfyNodes))
 			plt.ylabel('y')
 			plt.xlabel('x')
 			plt.colorbar(cp)
-			plt.savefig(saveTitle +str(self.numOfxNodes)+'x'+str(self.numOfyNodes)+'.png')
-			plt.close()
-			#plt.show()
+			#plt.savefig(saveTitle +str(self.numOfxNodes)+'x'+str(self.numOfyNodes)+'.png')
+			#plt.close()
+			plt.show()
 
 		elif plotType=='3d':
 
@@ -292,10 +325,12 @@ class Mesh(object):
 	@param b	b vector size nx1
 	"""
 	def solveLinalg(self,A,b,A_=None):
+		start = time.time()
 		if A_==None:
 			A_ = sp.csc_matrix(A)
 		x, exitCode = spla.gcrotmk(A_,b)
 		end = time.time()
+		print end-start
 		return x
 
 class Node(Mesh):
@@ -343,7 +378,9 @@ class Node(Mesh):
 		# error between approx and exact
 		self.error = None
         # logical saying if the nodes has been solved or not
-		self.solved = False
+		self.boundary = False
+		# Boundary location
+		self.boundaryLoc = None
 		# General Source 
 		self.source = 0.0
 		# Stream function source

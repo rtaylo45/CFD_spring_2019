@@ -5,9 +5,9 @@ from math import log10
 
 # Builds mesh
 print "Building Mesh"
-mesh = Me.Mesh(xLength=1.0, yLength=1.0, xNodes=101, yNodes=101)
+mesh = Me.Mesh(xLength=1.0, yLength=1.0, xNodes=26, yNodes=26)
 dt = 0.0001
-Re = 500.0
+Re = 10.0
 
 print "Setting up problem"
 # Generates the problem around the mesh
@@ -21,7 +21,9 @@ problem.NavierObj.setBC(side="west", BC=0., BCType=0)
 
 print "Solving problem"
 # solve the system
-timeSteps, lapDiffsTemp, navDiffs = problem.solve(solveType=1)
+S,b, BLap, ALap, DNav, CNav = problem.solve(solveType=1)
+
+'''
 lapDiffs = []
 for val in lapDiffsTemp:
 	try:
@@ -46,12 +48,10 @@ plt.xlabel('Time Step')
 plt.grid()
 plt.savefig('VorticityRe'+str(Re)+'dt'+str(dt)+'Residual'+str(mesh.numOfxNodes)+ 'x'+str(mesh.numOfyNodes)+'.png')
 plt.close()
+'''
 print "plotting solution"
 mesh.plot(solution="Phi",plotType='2d', dt=dt, Re=Re)
 mesh.plot(solution="w",plotType='2d', dt=dt, Re=Re)
-
-
-
 
 
 

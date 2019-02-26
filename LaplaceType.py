@@ -66,39 +66,60 @@ class Laplace(object):
 	"""
 	def getAMatrix(self):
 		self.__setACoefficients()
-		numOfColumns = self.mesh.numOfxNodes-2
-		numOfRows = self.mesh.numOfyNodes-2
+		numOfColumns = self.mesh.numOfxNodes
+		numOfRows = self.mesh.numOfyNodes
 		numOfUnknowns = numOfColumns*numOfRows
 		A = np.zeros((numOfUnknowns,numOfUnknowns))
 
 		# diagonal
 		for i in xrange(numOfUnknowns):
-			# main diagonal
-			A[i,i] = self.CoeffC
+			node = self.mesh.getNodeByAbsIndex(i)
+			
+			if node.boundary:
+				A[i,i] = 1.0
+			else:
+				# main diagonal
+				A[i,i] = self.CoeffC
 
-			# the off off diagonals
-			if i+numOfRows < numOfUnknowns:
+				# the off off diagonals
 				A[i,i+numOfRows] = self.CoeffB
-			if i+1 > numOfRows:
 				A[i,i-numOfRows] = self.CoeffD
 
-			# the off diagonals
-			if (i+1)%numOfRows:
+				# the off diagonals
 				A[i,i+1] = self.CoeffA
-			
-			if (i)%(numOfRows):
+				
 				A[i,i-1] = self.CoeffE
 
 		return A
 
 	"""
+	@Brief Builds the B part of super matrix
+	"""
+	def getBMatrix(self):
+		numOfColumns = self.mesh.numOfxNodes
+		numOfRows = self.mesh.numOfyNodes
+		numOfUnknowns = numOfColumns*numOfRows
+		B = np.zeros((numOfUnknowns,numOfUnknowns))
+		
+		for i in xrange(numOfUnknowns):
+			node = self.mesh.getNodeByAbsIndex(i)
+			if node.boundary:
+				B[i,i] = 0.0
+			else:
+				B[i,i] = 1.0
+		return B
+	"""
 	@Brief Builds and returns the b vector 
 	"""
 	def getbVector(self):
-		b = np.zeros((self.mesh.maxSolIndex,1))
-		for k in xrange(self.mesh.maxSolIndex):
-			node = self.mesh.getNodeBySolIndex(k)
-			b[k] = -node.VorticitySolution
+		numOfColumns = self.mesh.numOfxNodes
+		numOfRows = self.mesh.numOfyNodes
+		numOfUnknowns = numOfColumns*numOfRows
+		b = np.zeros((numOfUnknowns,1))
+
+		for k in xrange(numOfUnknowns):
+			node = self.mesh.getNodeByAbsIndex(k)
+			b[k] = 0.0
 		return b
 			
 	"""
@@ -114,7 +135,7 @@ class Laplace(object):
 	"""
 	@Brief Sets the boundary conditions for each face
 	"""
-	def __applyBC(self):
+	def applyBC(self):
 		for j in xrange(self.mesh.numOfyNodes):
 			for i in xrange(self.mesh.numOfxNodes):
 
@@ -122,22 +143,22 @@ class Laplace(object):
 				# First row. South BC
 				if j == 0:
 					node.LaplaceSolution = self.southBC 
-					node.solved = True 
+					node.boundary = True 
 
 				# Last Row. North BC
 				elif j == self.mesh.numOfyNodes-1:
 					node.LaplaceSolution = self.northBC
-					node.solved = True
+					node.boundary = True
 
 				# First column. West BC
 				elif i == 0:
 					node.LaplaceSolution = self.westBC
-					node.solved = True
+					node.boundary = True
 
 				# Last column. East BC
 				elif i == self.mesh.numOfxNodes-1:
 					node.LaplaceSolution = self.eastBC
-					node.solved = True
+					node.boundary = True
             
 				else:
 					pass

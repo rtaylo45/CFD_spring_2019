@@ -7,6 +7,7 @@ sets the solution.
 
 """
 import copy
+import matplotlib.pylab as plt
 import numpy as np
 import scipy.sparse.linalg as spla
 from scipy import sparse as sp
@@ -47,27 +48,19 @@ class Physics(object):
 			time = 0.0
 			diff = 0.0
 
-			ALap = self.LaplaceObj.getAMatrix()
-			ALapCSC = sp.csc_matrix(ALap)
-
-			while diff > -6.0:
+			while diff > -10.0:
 				time = float(timeStep)*self.NavierObj.dt
 				timeSteps.append(timeStep)
-				bLap = self.LaplaceObj.getbVector()
+				
+				# builds the super matrix
+				S, BLap, ALap, DNav, CNav = self.__buildSuperMatrix()
+				# builds the super b vector
+				b = self.__buildSuperbVector()
+				#print b
+				# solves the system
+				sol = self.mesh.solveLinalg(S,b)
 			
-				solLap = self.mesh.solveLinalg(ALap,bLap,A_=ALapCSC)
-			
-				self.__unPackSolution(solLap,'Lap')
-
-				self.NavierObj.upDateBC()
-				self.NavierObj.updateVelocities()
-
-				ANav = self.NavierObj.getAMatrix()
-				bNav = self.NavierObj.getbVector()
-				lapDiffs.append(self.__calcDiff('Lap'))
-
-				solNav = self.mesh.solveLinalg(ANav,bNav)
-				self.__unPackSolution(solNav, "Vor")
+				self.__unPackSolution(sol)
 
 				print time, log10(self.__calcDiff('Lap') + self.__calcDiff('Vor'))
 				diff =  log10(self.__calcDiff('Lap') + self.__calcDiff('Vor'))
@@ -75,20 +68,21 @@ class Physics(object):
 				navDiffs.append(self.__calcDiff('Vor'))
 				timeStep += 1
 
-		return timeSteps, lapDiffs, navDiffs
+		return S,b, BLap, ALap, DNav, CNav
 			
-		#self.__exactLaplace()
-		#self.__calcError()
+	def __unPackSolution(self, solutionVector):
+		numOfColumns = self.mesh.numOfxNodes
+		numOfRows = self.mesh.numOfyNodes
+		numOfUnknowns = numOfColumns*numOfRows
 
-	def __unPackSolution(self, solutionVector,var):
-		for k in xrange(self.mesh.maxSolIndex):
-			node = self.mesh.getNodeBySolIndex(k)
-			if var == "Lap":
-				node.oldLaplaceSolution = node.LaplaceSolution
-				node.LaplaceSolution = solutionVector[k]
-			if var =="Vor":
-				node.oldVorticitySolution = node.VorticitySolution
-				node.VorticitySolution = solutionVector[k]
+		for k in xrange(numOfUnknowns):
+			node = self.mesh.getNodeByAbsIndex(k)
+			# Update Laplace solution
+			node.oldLaplaceSolution = node.LaplaceSolution
+			node.LaplaceSolution = solutionVector[k]
+			# Update Vorticity solution
+			node.oldVorticitySolution = node.VorticitySolution
+			node.VorticitySolution = solutionVector[k+numOfUnknowns]
 
 	"""
 	@Brief Loops over the mesh to set the error between exacpt and approx
@@ -98,7 +92,7 @@ class Physics(object):
 		for i in xrange(self.mesh.numOfxNodes):
 			for j in xrange(self.mesh.numOfyNodes):
 				node = self.mesh.getNodeByLoc(i,j)
-				if not node.solved:
+				if not node.boundary:
 					if sol == 'Lap':
 						diff += (node.oldLaplaceSolution-
 						node.LaplaceSolution)**2.
@@ -138,7 +132,7 @@ class Physics(object):
 			for j in xrange(self.mesh.numOfyNodes):
 				node = self.mesh.getNodeByLoc(i,j)
 				node.oldSolution = copy.deepcopy(node.solution)
-				if not node.solved:
+				if not node.boundary:
 					self.__updateLaplace(node)
 
 	"""
@@ -161,10 +155,67 @@ class Physics(object):
 		node.solution = (1./temp1)*(xcontribution+ycontribution)
 
 
+	"""
+	@Brief Builds the big matrix used to for unsegregated solver
+	|A B| = |e|
+	|C D| = |f|
+	"""
+	def __buildSuperMatrix(self):
+		numOfColumns = self.mesh.numOfxNodes
+		numOfRows = self.mesh.numOfyNodes
+		numOfUnknowns = numOfColumns*numOfRows
+        
+		# update velocities for D matrix
+		self.NavierObj.updateVelocities()
+	
+		# builds the B matrix
+		BLap = self.LaplaceObj.getBMatrix()
+
+		# builds the A martix	
+		ALap = self.LaplaceObj.getAMatrix()
+		#plt.spy(ALap)
+		#plt.show()
+
+		# builds |A B| part of matrix
+		topHalf = np.concatenate((ALap,BLap), axis=1)
+		#plt.spy(topHalf)
+		#plt.show()
 
 
+		# builds the D matrix
+		DNav = self.NavierObj.getAMatrix()
+		#plt.spy(DNav)
+		#plt.show()
 
+		# builds the C matrix
+		CNav = self.NavierObj.getCMatrix()
+		#plt.spy(CNav)
+		#plt.show()
 
+		# builds |C D| part of matrix
+		botHalf = np.concatenate((CNav,DNav),axis=1)
+		#plt.spy(botHalf)
+		#plt.show()
 
+		# builds the super matrix
+		SMatrix = np.concatenate((topHalf,botHalf))
+		#plt.spy(SMatrix)
+		#plt.show()
 
+		return SMatrix, BLap, ALap, DNav, CNav
+		
 
+	"""
+	@Brief builds the super b vector 
+	|A B| = |e|
+	|C D| = |f|
+	"""
+	def __buildSuperbVector(self):
+		# builds the e vector
+		e = self.LaplaceObj.getbVector()
+		
+		# builds the f vector
+		f = self.NavierObj.getbVector()
+
+		return np.concatenate((e,f))
+	
