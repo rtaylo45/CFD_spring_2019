@@ -30,6 +30,31 @@ class Physics(object):
 		self.iterations = 0
 		self.LaplaceObj = LaType.Laplace(mesh)
 		self.NavierObj = VortType.Vorticity(mesh, dt, Re)
+		self.AMatrix = None
+		self.BMatrix = None
+		self.CMatrix = None
+		self.DMatrix = None
+
+		self.__runPresolve()
+
+	"""
+	@Brief runs the presolve. This sets the A, B, C matrix so we don't have to
+	keep building them. The remain constant
+	"""
+	def __runPresolve(self):
+		# builds the B matrix
+		BLap = self.LaplaceObj.getBMatrix()
+
+		# builds the A martix	
+		ALap = self.LaplaceObj.getAMatrix()
+
+
+		# builds the C matrix
+		CNav = self.NavierObj.getCMatrix()
+
+		self.AMatrix = sp.csc_matrix(ALap)
+		self.BMatrix = sp.csc_matrix(BLap)
+		self.CMatrix = sp.csc_matrix(CNav)
 
 	"""
 	@Brief Solves the problem
@@ -112,40 +137,22 @@ class Physics(object):
         
 		# update velocities for D matrix
 		self.NavierObj.updateVelocities()
-	
-		# builds the B matrix
-		BLap = self.LaplaceObj.getBMatrix()
-
-		# builds the A martix	
-		ALap = self.LaplaceObj.getAMatrix()
-		#plt.spy(ALap)
-		#plt.show()
 
 		# builds |A B| part of matrix
-		topHalf = np.concatenate((ALap,BLap), axis=1)
-		#plt.spy(topHalf)
-		#plt.show()
-
-
+		#topHalf = np.concatenate((self.AMatrix,self.BMatrix), axis=1)
+		topHalf = sp.hstack([self.AMatrix,self.BMatrix])
+	
 		# builds the D matrix
 		DNav = self.NavierObj.getAMatrix()
-		#plt.spy(DNav)
-		#plt.show()
-
-		# builds the C matrix
-		CNav = self.NavierObj.getCMatrix()
-		#plt.spy(CNav)
-		#plt.show()
+		DMatrix = sp.csc_matrix(DNav)
 
 		# builds |C D| part of matrix
-		botHalf = np.concatenate((CNav,DNav),axis=1)
-		#plt.spy(botHalf)
-		#plt.show()
+		#botHalf = np.concatenate((self.CMatrix,DMatrix),axis=1)
+		botHalf = sp.hstack([self.CMatrix,DMatrix])
 
 		# builds the super matrix
-		SMatrix = np.concatenate((topHalf,botHalf))
-		#plt.spy(SMatrix)
-		#plt.show()
+		#SMatrix = np.concatenate((topHalf,botHalf))
+		SMatrix = sp.vstack([topHalf,botHalf])
 
 		return SMatrix
 		

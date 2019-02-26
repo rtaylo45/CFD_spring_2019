@@ -327,8 +327,8 @@ class Mesh(object):
 		start = time.time()
 		#if A_==None:
 			#A_ = sp.csc_matrix(A)
-		#x, exitCode = spla.gcrotmk(A_,b)
-		x = np.linalg.solve(A,b)
+		x = spla.spsolve(A,b)
+		#x = np.linalg.solve(A,b)
 		end = time.time()
 		print end-start
 		return x
