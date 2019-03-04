@@ -49,6 +49,10 @@ class Mesh(object):
 		self.dx = None
         # The delta y term
 		self.dy = None
+		# the delta xi term for generalized coordinate system
+		self.dxi = None
+		# the delta eta term for generalized coordinate system
+		self.deta = None
         # BC on north side of mesh
 		self.northBC = None
         # BC type on the north side of mesh
@@ -344,11 +348,16 @@ class Node(Mesh):
 	@param x        x location on domain
 	@param y        y location on domain
 	"""
-	def __init__(self, i, j, absIndex, x, y):
-		# Mesh i index, x index
-		self.i = i
-		# Mesh j index, y index
-		self.j = j
+	def __init__(self, i=None, j=None, absIndex=None, 
+			iComp=None, jComp=None x=None, y=None, xi=None, eta=None):
+		# Physical Mesh i index, x index
+		self.iPhy = i
+		# Physical Mesh j index, y index
+		self.jPhy = j
+		# Computational Mesh i index, xi index
+		self.iComp = iComp
+		# Computational Mesh j index, eta index
+		self.jComp = jComp
 		# Absolution index. Includes the boundary nodes
 		self.absIndex = absIndex
 		# Solution index. Does not include boundary nodes
@@ -357,6 +366,10 @@ class Node(Mesh):
 		self.x = x
 		# y position
 		self.y = y
+		# xi position
+		self.xi = xi
+		# eta position
+		self.eta = eta
 		# the approx solution
 		self.solution = None
 		# the vorticity solution
@@ -381,12 +394,18 @@ class Node(Mesh):
 		self.boundary = False
 		# Boundary location
 		self.boundaryLoc = None
-		# General Source 
-		self.source = 0.0
-		# Stream function source
-		self.LaplacSource = 0.0
-		# Vorticity source
-		self.VorticitySource = 0.0
+		# first derivatives of generalized coordinate system
+		self.dxdxi = None
+		self.dxdeta = None
+		self.dydxi = None
+		self.dydeta = None
+		# second derivatives of generalized coordinate system
+		self.ddxdxidxi = None
+		self.ddxdetadeta = None
+		self.ddxdxideta = None
+		self.ddydxidxi = None
+		self.ddydetadeta = None
+		self.ddydxideta = None
 
         # Node connection information
 		self.east = None
