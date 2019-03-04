@@ -7,6 +7,7 @@ sets the solution.
 
 """
 import copy
+import matplotlib.pylab as plt
 import numpy as np
 import scipy.sparse.linalg as spla
 from scipy import sparse as sp
@@ -29,6 +30,31 @@ class Physics(object):
 		self.iterations = 0
 		self.LaplaceObj = LaType.Laplace(mesh)
 		self.NavierObj = VortType.Vorticity(mesh, dt, Re)
+		self.AMatrix = None
+		self.BMatrix = None
+		self.CMatrix = None
+		self.DMatrix = None
+
+		self.__runPresolve()
+
+	"""
+	@Brief runs the presolve. This sets the A, B, C matrix so we don't have to
+	keep building them. The remain constant
+	"""
+	def __runPresolve(self):
+		# builds the B matrix
+		BLap = self.LaplaceObj.getBMatrix()
+
+		# builds the A martix	
+		ALap = self.LaplaceObj.getAMatrix()
+
+
+		# builds the C matrix
+		CNav = self.NavierObj.getCMatrix()
+
+		self.AMatrix = sp.csc_matrix(ALap)
+		self.BMatrix = sp.csc_matrix(BLap)
+		self.CMatrix = sp.csc_matrix(CNav)
 
 	"""
 	@Brief Solves the problem
@@ -41,54 +67,45 @@ class Physics(object):
 
 		elif solveType==1:
 			timeSteps = []
-			lapDiffs = []
-			navDiffs = []
+			diffs = []
 			timeStep = 0
 			time = 0.0
 			diff = 0.0
 
-			ALap = self.LaplaceObj.getAMatrix()
-			ALapCSC = sp.csc_matrix(ALap)
-
-			while diff > -6.0:
+			while diff > -10.0:
 				time = float(timeStep)*self.NavierObj.dt
 				timeSteps.append(timeStep)
-				bLap = self.LaplaceObj.getbVector()
+				
+				# builds the super matrix
+				S = self.__buildSuperMatrix()
+				# builds the super b vector
+				b = self.__buildSuperbVector()
+				# solves the system
+				sol = self.mesh.solveLinalg(S,b)
 			
-				solLap = self.mesh.solveLinalg(ALap,bLap,A_=ALapCSC)
-			
-				self.__unPackSolution(solLap,'Lap')
-
-				self.NavierObj.upDateBC()
-				self.NavierObj.updateVelocities()
-
-				ANav = self.NavierObj.getAMatrix()
-				bNav = self.NavierObj.getbVector()
-				lapDiffs.append(self.__calcDiff('Lap'))
-
-				solNav = self.mesh.solveLinalg(ANav,bNav)
-				self.__unPackSolution(solNav, "Vor")
+				self.__unPackSolution(sol)
 
 				print time, log10(self.__calcDiff('Lap') + self.__calcDiff('Vor'))
 				diff =  log10(self.__calcDiff('Lap') + self.__calcDiff('Vor'))
+				diffs.append(diff)
 				print 
-				navDiffs.append(self.__calcDiff('Vor'))
 				timeStep += 1
 
-		return timeSteps, lapDiffs, navDiffs
+		return timeSteps, diffs
 			
-		#self.__exactLaplace()
-		#self.__calcError()
+	def __unPackSolution(self, solutionVector):
+		numOfColumns = self.mesh.numOfxNodes
+		numOfRows = self.mesh.numOfyNodes
+		numOfUnknowns = numOfColumns*numOfRows
 
-	def __unPackSolution(self, solutionVector,var):
-		for k in xrange(self.mesh.maxSolIndex):
-			node = self.mesh.getNodeBySolIndex(k)
-			if var == "Lap":
-				node.oldLaplaceSolution = node.LaplaceSolution
-				node.LaplaceSolution = solutionVector[k]
-			if var =="Vor":
-				node.oldVorticitySolution = node.VorticitySolution
-				node.VorticitySolution = solutionVector[k]
+		for k in xrange(numOfUnknowns):
+			node = self.mesh.getNodeByAbsIndex(k)
+			# Update Laplace solution
+			node.oldLaplaceSolution = node.LaplaceSolution
+			node.LaplaceSolution = solutionVector[k]
+			# Update Vorticity solution
+			node.oldVorticitySolution = node.VorticitySolution
+			node.VorticitySolution = solutionVector[k+numOfUnknowns]
 
 	"""
 	@Brief Loops over the mesh to set the error between exacpt and approx
@@ -98,7 +115,7 @@ class Physics(object):
 		for i in xrange(self.mesh.numOfxNodes):
 			for j in xrange(self.mesh.numOfyNodes):
 				node = self.mesh.getNodeByLoc(i,j)
-				if not node.solved:
+				if not node.boundary:
 					if sol == 'Lap':
 						diff += (node.oldLaplaceSolution-
 						node.LaplaceSolution)**2.
@@ -109,62 +126,48 @@ class Physics(object):
 		return float(diff)
 
 	"""
-	@Brief Runs the Gauss-Seidel solver
+	@Brief Builds the big matrix used to for unsegregated solver
+	|A B| = |e|
+	|C D| = |f|
 	"""
-	def __gaussSeidel(self):
-		diff = 1.0
-		diffs = []
-		iterations = 0
+	def __buildSuperMatrix(self):
+		numOfColumns = self.mesh.numOfxNodes
+		numOfRows = self.mesh.numOfyNodes
+		numOfUnknowns = numOfColumns*numOfRows
+        
+		# update velocities for D matrix
+		self.NavierObj.updateVelocities()
 
-		while diff > self.tol:
-			# Loops through the model
-			self.__sweepTopDown()
+		# builds |A B| part of matrix
+		#topHalf = np.concatenate((self.AMatrix,self.BMatrix), axis=1)
+		topHalf = sp.hstack([self.AMatrix,self.BMatrix])
+	
+		# builds the D matrix
+		DNav = self.NavierObj.getAMatrix()
+		DMatrix = sp.csc_matrix(DNav)
 
-			diff = 0.0
+		# builds |C D| part of matrix
+		#botHalf = np.concatenate((self.CMatrix,DMatrix),axis=1)
+		botHalf = sp.hstack([self.CMatrix,DMatrix])
 
-			for k in xrange(self.mesh.maxSolIndex):
-				node = self.mesh.getNodeBySolIndex(k)
-				diff = diff + abs(node.oldSolution-node.solution)
-			
-			diffs.append(diff)
-			iterations += 1
-		return diffs, iterations
+		# builds the super matrix
+		#SMatrix = np.concatenate((topHalf,botHalf))
+		SMatrix = sp.vstack([topHalf,botHalf])
 
-	"""
-	@Brief Sweeps from the top of the domain to the bottom
-	"""
-	def __sweepTopDown(self):
-		for i in xrange(self.mesh.numOfxNodes-1,-1,-1):
-			for j in xrange(self.mesh.numOfyNodes):
-				node = self.mesh.getNodeByLoc(i,j)
-				node.oldSolution = copy.deepcopy(node.solution)
-				if not node.solved:
-					self.__updateLaplace(node)
+		return SMatrix
+		
 
 	"""
-	@Brief Updates the solution for a sweeping pattern soltuion method
-
-	@param node 	mesh node object
+	@Brief builds the super b vector 
+	|A B| = |e|
+	|C D| = |f|
 	"""
-	def __updateLaplace(self,node):
-		dx = self.mesh.dx
-		dy = self.mesh.dy
-		Te = node.east.solution
-		Tw = node.west.solution
-		Tn = node.north.solution
-		Ts = node.south.solution
+	def __buildSuperbVector(self):
+		# builds the e vector
+		e = self.LaplaceObj.getbVector()
+		
+		# builds the f vector
+		f = self.NavierObj.getbVector()
 
-		temp1 = (2./dx**2. + 2./dy**2.)
-		xcontribution = (Te+Tw)/(dx**2.)
-		ycontribution = (Tn+Ts)/(dy**2.)
-
-		node.solution = (1./temp1)*(xcontribution+ycontribution)
-
-
-
-
-
-
-
-
-
+		return np.concatenate((e,f))
+	

@@ -28,73 +28,107 @@ class Vorticity(object):
 		self.westBC = None
 
 	"""
-	@Brief Setter for boundary condition
-
-	@param side     Face where BC is applied
-	@param BC       The boundary condition value
-	"""
-	def setBC(self, side, BC, BCType=0):
-		if side == "north":
-			self.northBC = BC
-		elif side == "south":
-			self.southBC = BC
-		elif side == "east":
-			self.eastBC = BC
-		elif side == "west":
-			self.westBC = BC
-		else:
-			print "Invalid BC"
-
-	"""
     @Brief Sets up the A matrix for a 5 point grid
 	"""
 	def getAMatrix(self):
-		numOfColumns = self.mesh.numOfxNodes-2
-		numOfRows = self.mesh.numOfyNodes-2
+		numOfColumns = self.mesh.numOfxNodes
+		numOfRows = self.mesh.numOfyNodes
 		numOfUnknowns = numOfColumns*numOfRows
 		A = np.zeros((numOfUnknowns,numOfUnknowns))
 
 		# diagonal
 		for i in xrange(numOfUnknowns):
-			node = self.mesh.getNodeBySolIndex(i)
-			self.__setACoefficients(node)
-			# main diagonal
-			A[i,i] = self.CoeffC
+			node = self.mesh.getNodeByAbsIndex(i)
+			if node.boundary:
+				A[i,i] = 1.0
+			else:
+				self.__setACoefficients(node)
+				# main diagonal
+				A[i,i] = self.CoeffC
 
-			# the off off diagonals
-			if i+numOfRows < numOfUnknowns:
+				# the off off diagonals
 				A[i,i+numOfRows] = self.CoeffB
-			if i+1 > numOfRows:
 				A[i,i-numOfRows] = self.CoeffD
 
-			# the off diagonals
-			if (i+1)%numOfRows:
+				# the off diagonals
 				A[i,i+1] = self.CoeffA
-			
-			if (i)%(numOfRows):
 				A[i,i-1] = self.CoeffE
 
 		return A
 
 	"""
+	@ Brief Builds and return the C matrix
+	"""
+	def getCMatrix(self):
+		numOfColumns = self.mesh.numOfxNodes
+		numOfRows = self.mesh.numOfyNodes
+		numOfUnknowns = numOfColumns*numOfRows
+		C = np.zeros((numOfUnknowns,numOfUnknowns))
+
+		coeffAy = -7./(2.*self.mesh.dy**2.)
+		coeffBy = 4./self.mesh.dy**2.
+		coeffCy = -1./(2.*self.mesh.dy**2.)
+		coeffAx = -7./(2.*self.mesh.dx**2.)
+		coeffBx = 4./self.mesh.dx**2.
+		coeffCx = -1./(2.*self.mesh.dx**2.)
+
+		for i in xrange(numOfUnknowns):
+			node = self.mesh.getNodeByAbsIndex(i)
+	
+			if node.boundary:
+				if node.boundaryLoc == 'north':
+					# k node
+					C[i,i] = coeffAy
+					# south node
+					C[i,i-1] = coeffBy
+					# south south node
+					C[i,i-2] = coeffCy	
+				elif node.boundaryLoc == 'south':
+					# k node
+					C[i,i] = coeffAy
+					# north node
+					C[i,i+1] = coeffBy
+					# north north node
+					C[i,i+2] = coeffCy
+				elif node.boundaryLoc =='west':
+					# k node
+					C[i,i] = coeffAx
+					# east node
+					C[i,i+numOfRows] = coeffBx
+					# east east node
+					C[i,i+2*numOfRows] = coeffCx
+				elif node.boundaryLoc == 'east':
+					# k node
+					C[i,i] = coeffAx
+					# west node
+					C[i,i-numOfRows] = coeffBx
+					# west west node
+					C[i,i-2*numOfRows] = coeffCx
+				else:
+					pass
+		return C
+
+	"""
 	@Brief Builds and returns the b vector 
 	"""
 	def getbVector(self):
-		B = np.zeros((self.mesh.maxSolIndex,1))
-		for k in xrange(self.mesh.maxSolIndex):
-			node = self.mesh.getNodeBySolIndex(k)
-			self.__setACoefficients(node)
-			B[k] = B[k] + node.VorticitySolution/self.dt
+		numOfColumns = self.mesh.numOfxNodes
+		numOfRows = self.mesh.numOfyNodes
+		numOfUnknowns = numOfColumns*numOfRows
+		b = np.zeros((numOfUnknowns,1))
+
+		for k in xrange(numOfUnknowns):
+			node = self.mesh.getNodeByAbsIndex(k)
+
+			if node.boundary:
+				if node.boundaryLoc == 'north':
+					b[k] = -3.*1.0/self.mesh.dy
+				else:
+					b[k] = 0.0
+			else:
+				b[k] = node.VorticitySolution/self.dt
 			
-			if node.west.solved:
-				B[k] = B[k] - node.west.VorticitySolution*self.CoeffD
-			if node.east.solved:
-				B[k] = B[k] - node.east.VorticitySolution*self.CoeffB
-			if node.south.solved:
-				B[k] = B[k] - node.south.VorticitySolution*self.CoeffE
-			if node.north.solved:
-				B[k] = B[k] - node.north.VorticitySolution*self.CoeffA
-		return B 
+		return b
 
 	"""
 	@brief Sets the coefficients for the A matrix
@@ -121,75 +155,10 @@ class Vorticity(object):
 			for j in xrange(self.mesh.numOfyNodes):
 				node = self.mesh.getNodeByLoc(i,j)
 				
-				if not node.solved:
+				if not node.boundary:
 					node.uVelocity = ((node.north.LaplaceSolution - 
 					node.south.LaplaceSolution)/(2.*self.mesh.dy))
 
 					node.vVelocity = -((node.west.LaplaceSolution -
 					node.east.LaplaceSolution)/(2.*self.mesh.dx))
-
-	"""
-	@Brief Sets the boundary conditions for each face
-	"""
-	def upDateBC(self):
-		vEast = self.eastBC
-		vWest = self.westBC
-		vNorth = self.northBC
-		vSouth = self.southBC
-
-		for j in xrange(self.mesh.numOfyNodes):
-			
-			# west BC	
-			i = 0
-			node = self.mesh.getNodeByLoc(i,j)
-			vort = ((7.*node.LaplaceSolution - 
-			8.*node.east.LaplaceSolution + 
-			node.east.east.LaplaceSolution)/(2.*self.mesh.dx**2.))	
-			node.VorticitySolution = vort
-			node.solved = True
-
-			# east BC
-			i = (self.mesh.numOfxNodes-1)
-			node = self.mesh.getNodeByLoc(i,j)
-			vort = ((7.*node.LaplaceSolution - 
-			8.*node.west.LaplaceSolution + 
-			node.west.west.LaplaceSolution)/(2.*self.mesh.dx**2.))	
-			node.VorticitySolution = vort
-			node.solved = True
-						
-		for i in xrange(self.mesh.numOfxNodes):
-
-			# south BC	
-			j = 0
-			node = self.mesh.getNodeByLoc(i,j)
-			vort = ((7.*node.LaplaceSolution - 
-			8.*node.north.LaplaceSolution + 
-			node.north.north.LaplaceSolution)/(2.*self.mesh.dy**2.))	
-			node.VorticitySolution = vort
-			node.solved = True
-
-			# north BC
-			j = (self.mesh.numOfyNodes-1)
-			node = self.mesh.getNodeByLoc(i,j)
-			vort = ((7.*node.LaplaceSolution - 
-			8.*node.south.LaplaceSolution + 
-			node.south.south.LaplaceSolution)/(2.*(self.mesh.dy**2.))
-			- 3.*vNorth/(self.mesh.dy))	
-			node.VorticitySolution = vort
-			node.solved = True
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
