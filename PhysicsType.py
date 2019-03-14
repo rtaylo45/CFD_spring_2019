@@ -72,7 +72,7 @@ class Physics(object):
 			time = 0.0
 			diff = 0.0
 
-			while diff > -10.0:
+			while diff > -9.0:
 				time = float(timeStep)*self.NavierObj.dt
 				timeSteps.append(timeStep)
 				
@@ -85,35 +85,37 @@ class Physics(object):
 			
 				self.__unPackSolution(sol)
 
-				print time, log10(self.__calcDiff('Lap') + self.__calcDiff('Vor'))
+				print timeStep, log10(self.__calcDiff('Lap') + self.__calcDiff('Vor'))
 				diff =  log10(self.__calcDiff('Lap') + self.__calcDiff('Vor'))
 				diffs.append(diff)
 				print 
 				timeStep += 1
 
+				#self.mesh.plot(solution="Phi",plotType='2d', dt=1.0, Re=100)
+
 		return timeSteps, diffs
 			
 	def __unPackSolution(self, solutionVector):
-		numOfColumns = self.mesh.numOfxNodes
-		numOfRows = self.mesh.numOfyNodes
+		numOfColumns = self.mesh.numOfxiNodes
+		numOfRows = self.mesh.numOfetaNodes
 		numOfUnknowns = numOfColumns*numOfRows
 
 		for k in xrange(numOfUnknowns):
 			node = self.mesh.getNodeByAbsIndex(k)
 			# Update Laplace solution
-			node.oldLaplaceSolution = node.LaplaceSolution
-			node.LaplaceSolution = solutionVector[k]
+			node.oldLaplaceSolution = copy.deepcopy(node.LaplaceSolution)
+			node.LaplaceSolution = copy.deepcopy(solutionVector[k])
 			# Update Vorticity solution
-			node.oldVorticitySolution = node.VorticitySolution
-			node.VorticitySolution = solutionVector[k+numOfUnknowns]
+			node.oldVorticitySolution = copy.deepcopy(node.VorticitySolution)
+			node.VorticitySolution = copy.deepcopy(solutionVector[k+numOfUnknowns])
 
 	"""
 	@Brief Loops over the mesh to set the error between exacpt and approx
 	"""
 	def __calcDiff(self,sol):
 		diff = 0.0
-		for i in xrange(self.mesh.numOfxNodes):
-			for j in xrange(self.mesh.numOfyNodes):
+		for i in xrange(self.mesh.numOfxiNodes):
+			for j in xrange(self.mesh.numOfetaNodes):
 				node = self.mesh.getNodeByLoc(i,j)
 				if not node.boundary:
 					if sol == 'Lap':
@@ -122,7 +124,7 @@ class Physics(object):
 					elif sol =='Vor':
 						diff += (node.oldVorticitySolution -
 						node.VorticitySolution)**2.
-		diff = diff**(.5)/(self.mesh.numOfyNodes*self.mesh.numOfxNodes)
+		diff = diff**(.5)/(self.mesh.numOfetaNodes*self.mesh.numOfxiNodes)
 		return float(diff)
 
 	"""
@@ -131,8 +133,8 @@ class Physics(object):
 	|C D| = |f|
 	"""
 	def __buildSuperMatrix(self):
-		numOfColumns = self.mesh.numOfxNodes
-		numOfRows = self.mesh.numOfyNodes
+		numOfColumns = self.mesh.numOfxiNodes
+		numOfRows = self.mesh.numOfetaNodes
 		numOfUnknowns = numOfColumns*numOfRows
         
 		# update velocities for D matrix
@@ -147,7 +149,7 @@ class Physics(object):
 		DMatrix = sp.csc_matrix(DNav)
 
 		# builds |C D| part of matrix
-		#botHalf = np.concatenate((self.CMatrix,DMatrix),axis=1)
+		#botHalf = np.concatenate((self.CMatrix,DNav),axis=1)
 		botHalf = sp.hstack([self.CMatrix,DMatrix])
 
 		# builds the super matrix

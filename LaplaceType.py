@@ -20,6 +20,10 @@ class Laplace(object):
 		self.CoeffC = None
 		self.CoeffD = None
 		self.CoeffE = None
+		self.CoeffF = None
+		self.CoeffG = None
+		self.CoeffH = None
+		self.CoeffI = None
         # BC on north side of mesh
 		self.northBC = None
         # BC type on the north side of mesh
@@ -41,9 +45,8 @@ class Laplace(object):
 	@Brief Sets up the A matrix for a 5 point grid
 	"""
 	def getAMatrix(self):
-		self.__setACoefficients()
-		numOfColumns = self.mesh.numOfxNodes
-		numOfRows = self.mesh.numOfyNodes
+		numOfColumns = self.mesh.numOfxiNodes
+		numOfRows = self.mesh.numOfetaNodes
 		numOfUnknowns = numOfColumns*numOfRows
 		A = np.zeros((numOfUnknowns,numOfUnknowns))
 
@@ -54,16 +57,28 @@ class Laplace(object):
 			if node.boundary:
 				A[i,i] = 1.0
 			else:
-				# main diagonal
+				self.__setACoefficients(node)
+				# main diagonal k node
 				A[i,i] = self.CoeffC
 
 				# the off off diagonals
+				# east node
 				A[i,i+numOfRows] = self.CoeffB
+				# west node
 				A[i,i-numOfRows] = self.CoeffD
+				# south west node
+				A[i,i-numOfRows-1] = self.CoeffI
+				# north west node
+				A[i,i-numOfRows+1] = self.CoeffG
+				# south east node
+				A[i,i+numOfRows-1] = self.CoeffH
+				# north east node
+				A[i,i-numOfRows+1] = self.CoeffF
 
 				# the off diagonals
+				# north node
 				A[i,i+1] = self.CoeffA
-				
+				# south node	
 				A[i,i-1] = self.CoeffE
 
 		return A
@@ -72,8 +87,8 @@ class Laplace(object):
 	@Brief Builds the B part of super matrix
 	"""
 	def getBMatrix(self):
-		numOfColumns = self.mesh.numOfxNodes
-		numOfRows = self.mesh.numOfyNodes
+		numOfColumns = self.mesh.numOfxiNodes
+		numOfRows = self.mesh.numOfetaNodes
 		numOfUnknowns = numOfColumns*numOfRows
 		B = np.zeros((numOfUnknowns,numOfUnknowns))
 		
@@ -88,8 +103,8 @@ class Laplace(object):
 	@Brief Builds and returns the b vector 
 	"""
 	def getbVector(self):
-		numOfColumns = self.mesh.numOfxNodes
-		numOfRows = self.mesh.numOfyNodes
+		numOfColumns = self.mesh.numOfxiNodes
+		numOfRows = self.mesh.numOfetaNodes
 		numOfUnknowns = numOfColumns*numOfRows
 		b = np.zeros((numOfUnknowns,1))
 
@@ -100,12 +115,16 @@ class Laplace(object):
 			
 	"""
 	@brief Sets the coefficients for the A matrix
+	
+	@param node		node object
 	"""
-	def __setACoefficients(self):
-		self.CoeffA = 1./(self.mesh.dy**2.)
-		self.CoeffB = 1./(self.mesh.dx**2.)
-		self.CoeffC = -(2./(self.mesh.dx**2.) + 2./(self.mesh.dy**2.))
-		self.CoeffD = 1./(self.mesh.dx**2.)
-		self.CoeffE = 1./(self.mesh.dy**2.)
-		
-
+	def __setACoefficients(self, node):
+		self.CoeffA = node.beta/self.mesh.deta**2. + node.Q/2./self.mesh.dxi
+		self.CoeffB = node.alfa/self.mesh.dxi**2. + node.P/2./self.mesh.dxi
+		self.CoeffC = -2.*node.alfa/self.mesh.dxi**2. - 2.*node.beta/self.mesh.deta**2.
+		self.CoeffD = node.alfa/self.mesh.dxi**2. - node.P/2./self.mesh.dxi
+		self.CoeffE = node.beta/self.mesh.deta**2. - node.Q/2./self.mesh.dxi
+		self.CoeffF = 2.*node.gama/4./self.mesh.dxi/self.mesh.deta
+		self.CoeffG = -2.*node.gama/4./self.mesh.dxi/self.mesh.deta
+		self.CoeffH = -2.*node.gama/4./self.mesh.dxi/self.mesh.deta
+		self.CoeffI = 2.*node.gama/4./self.mesh.dxi/self.mesh.deta
