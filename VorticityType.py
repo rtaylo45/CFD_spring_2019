@@ -181,9 +181,22 @@ class Vorticity(object):
 				node = self.mesh.getNodeByLoc(i,j)
 				
 				if not node.boundary:
+					# Updates the computational velocity
 					node.uVelocity = node.jac*((node.north.LaplaceSolution - 
 					node.south.LaplaceSolution)/(2.*self.mesh.deta))
 
-					node.vVelocity = node.jac*((node.west.LaplaceSolution -
-					node.east.LaplaceSolution)/(2.*self.mesh.dxi))
+					node.vVelocity = node.jac*((node.east.LaplaceSolution -
+					node.west.LaplaceSolution)/(2.*self.mesh.dxi))
+
+					# Updates the physical velocity
+					node.uVelocityPhy = (((node.north.LaplaceSolution -
+					node.south.LaplaceSolution)/(2.*self.mesh.deta)*node.detady) + 
+					(node.east.LaplaceSolution - node.west.LaplaceSolution)/
+					(2.*self.mesh.dxi)*node.dxidy)
+	
+					node.vVelocityPhy = -(((node.north.LaplaceSolution -
+					node.south.LaplaceSolution)/(2.*self.mesh.deta)*node.detadx) -
+					(node.east.LaplaceSolution - node.west.LaplaceSolution)/
+					(2.*self.mesh.dxi)*node.dxidx)
+
 

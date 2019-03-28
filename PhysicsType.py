@@ -72,7 +72,7 @@ class Physics(object):
 			time = 0.0
 			diff = 0.0
 
-			while diff > -9.0:
+			while diff > -8.0:
 				time = float(timeStep)*self.NavierObj.dt
 				timeSteps.append(timeStep)
 				

@@ -529,7 +529,7 @@ class Mesh(object):
 			0.9766, 1.0]
 		for j in xrange(self.numOfetaNodes):
 			node = self.getNodeByLoc(ic,j)
-			plotVel.append(node.uVelocity)
+			plotVel.append(node.uVelocityPhy)
 			ploty.append(node.y)
 		plt.plot(plotVel,ploty, label="Solution")
 		plt.plot(goalVel, goaly, 'o', label="Ghia")
@@ -538,9 +538,9 @@ class Mesh(object):
 		plt.ylabel("y")
 		plt.ylim(0,1)
 		plt.xlabel("U Velocity")
-		#plt.show()
-		plt.savefig("uVelocity.png")
-		plt.close()
+		plt.show()
+		#plt.savefig("uVelocity.png")
+		#plt.close()
 
 	def plotCenterLineVVelocity(self):
 		# center i node
@@ -555,7 +555,7 @@ class Mesh(object):
 			0.9688, 1.0]
 		for i in xrange(self.numOfxiNodes):
 			node = self.getNodeByLoc(i,jc)
-			plotVel.append(node.vVelocity)
+			plotVel.append(-node.vVelocityPhy)
 			plotx.append(node.x)
 		plt.plot(plotx,plotVel, label="Solution")
 		plt.plot(goalx, goalVel, 'o',label="Ghia")
@@ -564,9 +564,9 @@ class Mesh(object):
 		plt.ylabel("V Velocity")
 		plt.xlabel("x")
 		plt.xlim(0,1)
-		plt.savefig("vVelocity.png")
-		#plt.show()
-		plt.close()
+		#plt.savefig("vVelocity.png")
+		plt.show()
+		#plt.close()
 
 
 	"""
@@ -629,10 +629,14 @@ class Node(Mesh):
 		self.oldVorticitySolution = 0.0
 		# the stream function solution
 		self.oldLaplaceSolution = 0.0
-		# the velocity in x direction
+		# the velocity in x direction computational
 		self.uVelocity = 0.0
-		# the velocity in the y direction
+		# the velocity in the y direction computational
 		self.vVelocity = 0.0
+		# the velocity in x direction physical
+		self.uVelocityPhy = 0.0
+		# the velocity in the y direction physical
+		self.vVelocityPhy = 0.0
 		# the old solution
 		self.oldSolution = None
 		# the exact solution
