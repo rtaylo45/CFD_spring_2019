@@ -13,7 +13,8 @@ class Laplace(object):
 
 	@param Mesh		The Mesh object
 	"""
-	def __init__(self, mesh):
+	def __init__(self, mesh,dt):
+		self.dt = dt
 		self.mesh = mesh
 		self.CoeffA = None
 		self.CoeffB = None
@@ -51,35 +52,37 @@ class Laplace(object):
 		A = np.zeros((numOfUnknowns,numOfUnknowns))
 
 		# diagonal
-		for i in xrange(numOfUnknowns):
-			node = self.mesh.getNodeByAbsIndex(i)
+		for j in xrange(self.mesh.numOfxiNodes):
+			for i in xrange(self.mesh.numOfetaNodes):
+				node = self.mesh.getNodeByLoc(i,j)
 			
-			if node.boundary:
-				A[i,i] = 1.0
-			else:
-				self.__setACoefficients(node)
-				# main diagonal k node
-				A[i,i] = self.CoeffC
+				if node.boundary:
+					A[node.absIndex,node.absIndex] = 1.0
+				else:
+					self.__setACoefficients(node)
+					# main diagonal k node
+					A[node.absIndex,node.absIndex] = self.CoeffC
+					#print 'abs',node.absIndex, node.north.absIndex
 
-				# the off off diagonals
-				# east node
-				A[i,i+numOfRows] = self.CoeffB
-				# west node
-				A[i,i-numOfRows] = self.CoeffD
-				# south west node
-				A[i,i-numOfRows-1] = self.CoeffI
-				# north west node
-				A[i,i-numOfRows+1] = self.CoeffG
-				# south east node
-				A[i,i+numOfRows-1] = self.CoeffH
-				# north east node
-				A[i,i-numOfRows+1] = self.CoeffF
+					# the off off diagonals
+					# east node
+					A[node.absIndex,node.east.absIndex] = self.CoeffB
+					# west node
+					A[node.absIndex,node.west.absIndex] = self.CoeffD
+					# south west node
+					A[node.absIndex,node.south.west.absIndex] = self.CoeffI
+					# north west node
+					A[node.absIndex,node.north.west.absIndex] = self.CoeffG
+					# south east node
+					A[node.absIndex,node.south.east.absIndex] = self.CoeffH
+					# north east node
+					A[node.absIndex,node.north.east.absIndex] = self.CoeffF
 
-				# the off diagonals
-				# north node
-				A[i,i+1] = self.CoeffA
-				# south node	
-				A[i,i-1] = self.CoeffE
+					# the off diagonals
+					# north node
+					A[node.absIndex,node.north.absIndex] = self.CoeffA
+					# south node	
+					A[node.absIndex,node.south.absIndex] = self.CoeffE
 
 		return A
 
@@ -110,7 +113,10 @@ class Laplace(object):
 
 		for k in xrange(numOfUnknowns):
 			node = self.mesh.getNodeByAbsIndex(k)
-			b[k] = 0.0
+			if node.boundaryLoc == 'north':
+				b[k] = node.y
+			else:
+				b[k] = 0.0
 		return b
 			
 	"""
@@ -119,11 +125,11 @@ class Laplace(object):
 	@param node		node object
 	"""
 	def __setACoefficients(self, node):
-		self.CoeffA = node.beta/self.mesh.deta**2. + node.Q/2./self.mesh.dxi
+		self.CoeffA = node.beta/self.mesh.deta**2. + node.Q/2./self.mesh.deta
 		self.CoeffB = node.alfa/self.mesh.dxi**2. + node.P/2./self.mesh.dxi
-		self.CoeffC = -2.*node.alfa/self.mesh.dxi**2. - 2.*node.beta/self.mesh.deta**2.
+		self.CoeffC = -2.*node.alfa/self.mesh.dxi**2. - 2.*node.beta/self.mesh.deta**2. - 0./self.dt
 		self.CoeffD = node.alfa/self.mesh.dxi**2. - node.P/2./self.mesh.dxi
-		self.CoeffE = node.beta/self.mesh.deta**2. - node.Q/2./self.mesh.dxi
+		self.CoeffE = node.beta/self.mesh.deta**2. - node.Q/2./self.mesh.deta
 		self.CoeffF = 2.*node.gama/4./self.mesh.dxi/self.mesh.deta
 		self.CoeffG = -2.*node.gama/4./self.mesh.dxi/self.mesh.deta
 		self.CoeffH = -2.*node.gama/4./self.mesh.dxi/self.mesh.deta

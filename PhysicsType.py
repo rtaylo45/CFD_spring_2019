@@ -28,7 +28,7 @@ class Physics(object):
 		self.solveType = solveType
 		self.tol = tol
 		self.iterations = 0
-		self.LaplaceObj = LaType.Laplace(mesh)
+		self.LaplaceObj = LaType.Laplace(mesh, dt)
 		self.NavierObj = VortType.Vorticity(mesh, dt, Re)
 		self.AMatrix = None
 		self.BMatrix = None
@@ -44,17 +44,26 @@ class Physics(object):
 	def __runPresolve(self):
 		# builds the B matrix
 		BLap = self.LaplaceObj.getBMatrix()
+		#plt.spy(BLap)
+		#plt.show()
 
 		# builds the A martix	
 		ALap = self.LaplaceObj.getAMatrix()
-
+		#plt.spy(ALap)
+		#plt.show()
 
 		# builds the C matrix
 		CNav = self.NavierObj.getCMatrix()
+		#plt.spy(CNav)
+		#plt.show()
 
 		self.AMatrix = sp.csc_matrix(ALap)
 		self.BMatrix = sp.csc_matrix(BLap)
 		self.CMatrix = sp.csc_matrix(CNav)
+
+		#self.AMatrix = ALap
+		#self.BMatrix = BLap
+		#self.CMatrix = CNav
 
 	"""
 	@Brief Solves the problem
@@ -72,7 +81,7 @@ class Physics(object):
 			time = 0.0
 			diff = 0.0
 
-			while diff > -8.0:
+			while timeStep < 30:
 				time = float(timeStep)*self.NavierObj.dt
 				timeSteps.append(timeStep)
 				
@@ -91,7 +100,8 @@ class Physics(object):
 				print 
 				timeStep += 1
 
-				#self.mesh.plot(solution="Phi",plotType='2d', dt=1.0, Re=100)
+				#self.mesh.plot(solution="Phi",plotType='2d', dt=1.0, Re=40)
+				#self.mesh.plot(solution="w",plotType='2d', dt=1.0, Re=40)
 
 		return timeSteps, diffs
 			
@@ -155,6 +165,8 @@ class Physics(object):
 		# builds the super matrix
 		#SMatrix = np.concatenate((topHalf,botHalf))
 		SMatrix = sp.vstack([topHalf,botHalf])
+		#plt.spy(SMatrix)
+		#plt.show()
 
 		return SMatrix
 		

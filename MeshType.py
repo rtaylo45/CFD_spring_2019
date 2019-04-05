@@ -95,7 +95,7 @@ class Mesh(object):
 		absoluteIndex = 0
 		alen = np.zeros((self.numOfxiNodes,1))
 		for i in xrange(1,self.numOfxiNodes):
-			alen[i] = alen[i-1] + min(float(i),self.numOfxiNodes-i)**1.0
+			alen[i] = alen[i-1] + (float(i)+1.)**(1.0)
 		alen = alen/alen[self.numOfxiNodes-1]
        
 		# Loops from bottom left hand corner of mesh to top of mesh. Then goes
@@ -104,10 +104,10 @@ class Mesh(object):
 			for j in xrange(self.numOfetaNodes):
 				xi = float(i)*self.dxi
 				eta = float(j)*self.deta
-				x = float(alen[i])
-				y = float(alen[j])
-				#x = float(i)*self.dx
-				#y = float(j)*self.dy
+				theta = 2.*np.pi*(1. - float(i)/(float(self.numOfxiNodes)-1.))
+				rad = 0.5 + 99.5*alen[j]
+				x = rad*np.cos(theta)
+				y = rad*np.sin(theta)
 
 				nodeObj = Node(iPhy=i, jPhy=j, iComp=i, jComp=j, absIndex=absoluteIndex, 
 				xi=xi, eta=eta, x=x, y=y)
@@ -127,6 +127,13 @@ class Mesh(object):
 				node.south = self.getNodeByLoc(i,j-1)
 				node.west = self.getNodeByLoc(i-1,j)
 				node.east = self.getNodeByLoc(i+1,j)
+
+				# Special case for the o-grid mesh. Need to connect the 
+				# ends together
+				if i == 0:
+					node.west = self.getNodeByLoc(i+self.numOfxiNodes-2,j)
+				if i == self.numOfxiNodes-1:
+					node.east = self.getNodeByLoc(i-self.numOfxiNodes+2,j)
 
 	"""
 	@Brief Checks the i,j index to make sure they are in range
@@ -169,14 +176,14 @@ class Mesh(object):
 			# west BC	
 			i = 0
 			node = self.getNodeByLoc(i,j)
-			node.boundary = True
-			node.boundaryLoc = 'west'
+			#node.boundary = True
+			#node.boundaryLoc = 'west'
 
 			# east BC
 			i = (self.numOfxiNodes-1)
 			node = self.getNodeByLoc(i,j)
-			node.boundary = True
-			node.boundaryLoc = 'east'
+			#node.boundary = True
+			#node.boundaryLoc = 'east'
 						
 		for i in xrange(self.numOfxiNodes):
 			# south BC	
@@ -210,14 +217,10 @@ class Mesh(object):
 					node.dydeta = (node.north.y - node.south.y)/2./self.deta
 				
 					# second derivatives
-					node.ddxdxidxi = (node.east.x - 2.*node.x + 
-						node.west.x)/self.dxi**2.
-					node.ddydxidxi = (node.east.y - 2.*node.y + 
-						node.west.y)/self.dxi**2.
-					node.ddxdetadeta = (node.north.x - 2.*node.x + 
-						node.south.x)/self.deta**2.
-					node.ddydetadeta = (node.north.y - 2.*node.y + 
-						node.south.y)/self.deta**2.
+					node.ddxdxidxi = (node.east.x - 2.*node.x + node.west.x)/self.dxi**2.
+					node.ddydxidxi = (node.east.y - 2.*node.y + node.west.y)/self.dxi**2.
+					node.ddxdetadeta = (node.north.x - 2.*node.x + node.south.x)/self.deta**2.
+					node.ddydetadeta = (node.north.y - 2.*node.y + node.south.y)/self.deta**2.
 					node.ddxdxideta = (node.north.east.x - node.south.east.x - 
 						node.north.west.x + node.south.west.x)/4./self.dxi/self.deta 
 					node.ddydxideta = (node.north.east.y - node.south.east.y -
@@ -227,67 +230,44 @@ class Mesh(object):
 					# Left (west) boundary 
 					if i == 0:
 						# xi derivatives
-						node.dxdxi = (-3.*node.x + 4.*node.east.x -
-							node.east.east.x)/2./self.dxi
-						node.dydxi = (-3.*node.y + 4.*node.east.y -
-							node.east.east.y)/2./self.dxi
-						node.ddxdxidxi = (2.*node.x - 5.*node.east.x +
-							4.*node.east.east.x - node.east.east.east.x)/self.dxi**2.
-						node.ddydxidxi = (2.*node.y - 5.*node.east.y +
-							4.*node.east.east.y - node.east.east.east.y)/self.dxi**2.
-						# eta derivatives
-						if j > 0 and j < self.numOfetaNodes-1:
-							node.dxdeta = (node.north.x - node.south.x)/2./self.deta	
-							node.dydeta = (node.north.y - node.south.y)/2./self.deta	
-							node.ddxdetadeta = (node.north.x - 2.*node.x + 
-								node.south.x)/self.deta**2.
-							node.ddydetadeta = (node.north.y - 2.*node.y + 
-								node.south.y)/self.deta**2.
+						# first derivatives
+						node.dxdxi = (node.east.x - node.west.x)/2./self.dxi
+						node.dydxi = (node.east.y - node.west.y)/2./self.dxi
+						# second derivatives
+						node.ddxdxidxi = (node.east.x - 2.*node.x + node.west.x)/self.dxi**2.
+						node.ddydxidxi = (node.east.y - 2.*node.y + node.west.y)/self.dxi**2.
+
 					# right (east) boundary
 					if i == self.numOfxiNodes-1:
 						# xi derivatives
-						node.dxdxi = (3.*node.x - 4.*node.west.x +
-							node.west.west.x)/2./self.dxi
-						node.dydxi = (3.*node.y - 4.*node.west.y +
-							node.west.west.y)/2./self.dxi
-						node.ddxdxidxi = (2.*node.x - 5.*node.west.x +
-							4.*node.west.west.x - node.west.west.west.x)/self.dxi**2.
-						node.ddydxidxi = (2.*node.y - 5.*node.west.y +
-							4.*node.west.west.y - node.west.west.west.y)/self.dxi**2.
-						# eta derivatives
-						if j > 0 and j < self.numOfetaNodes-1:
-							node.dxdeta = (node.north.x - node.south.x)/2./self.deta	
-							node.dydeta = (node.north.y - node.south.y)/2./self.deta	
-							node.ddxdetadeta = (node.north.x - 2.*node.x + 
-								node.south.x)/self.deta**2.
-							node.ddydetadeta = (node.north.y - 2.*node.y + 
-								node.south.y)/self.deta**2.
+						# first derivatives
+						node.dxdxi = (node.east.x - node.west.x)/2./self.dxi
+						node.dydxi = (node.east.y - node.west.y)/2./self.dxi
+						# second derivatives
+						node.ddxdxidxi = (node.east.x - 2.*node.x +	node.west.x)/self.dxi**2.
+						node.ddydxidxi = (node.east.y - 2.*node.y + node.west.y)/self.dxi**2.
+				
 					# the bottom (south) boundary	
 					if j == 0:
 						# xi derivatives
 						if i > 0 and i < self.numOfxiNodes-1:
 							node.dxdxi = (node.east.x - node.west.x)/2./self.dxi	
 							node.dydxi = (node.east.y - node.west.y)/2./self.dxi
-							node.ddxdxidxi = (node.east.x - 2.*node.x + 
-								node.west.x)/self.dxi**2.
-							node.ddydxidxi = (node.east.y - 2.*node.y + 
-								node.west.y)/self.dxi**2.
+							node.ddxdxidxi = (node.east.x - 2.*node.x + node.west.x)/self.dxi**2.
+							node.ddydxidxi = (node.east.y - 2.*node.y + node.west.y)/self.dxi**2.
 						# eta derivatives
-						node.dxdeta = (-3.*node.x + 4.*node.north.x - 
-							node.north.north.x)/2./self.deta
-						node.dydeta = (-3.*node.y + 4.*node.north.y - 
-							node.north.north.y)/2./self.deta
+						node.dxdeta = (-3.*node.x + 4.*node.north.x - node.north.north.x)/2./self.deta
+						node.dydeta = (-3.*node.y + 4.*node.north.y - node.north.north.y)/2./self.deta
 						node.ddxdetadeta = (2.*node.x - 5.*node.north.x + 
 							4.*node.north.north.x - node.north.north.north.x)/self.deta**2.
 						node.ddydetadeta = (2.*node.y - 5.*node.north.y + 
 							4.*node.north.north.y - node.north.north.north.y)/self.deta**2.
+
 					# top (north) boundary
 					if j == self.numOfetaNodes-1:
 						# eta derivatives
-						node.dxdeta = (3.*node.x - 4.*node.south.x + 
-							node.south.south.x)/2./self.deta
-						node.dydeta = (3.*node.y - 4.*node.south.y + 
-							node.south.south.y)/2./self.deta
+						node.dxdeta = (3.*node.x - 4.*node.south.x + node.south.south.x)/2./self.deta
+						node.dydeta = (3.*node.y - 4.*node.south.y + node.south.south.y)/2./self.deta
 						node.ddxdetadeta = (2.*node.x - 5.*node.south.x + 
 							4.*node.south.south.x - node.south.south.south.x)/self.deta**2.
 						node.ddydetadeta = (2.*node.y - 5.*node.south.y + 
@@ -296,57 +276,21 @@ class Mesh(object):
 						if i > 0 and i < self.numOfxiNodes-1:
 							node.dxdxi = (node.east.x - node.west.x)/2./self.dxi	
 							node.dydxi = (node.east.y - node.west.y)/2./self.dxi
-							node.ddxdxidxi = (node.east.x - 2.*node.x + 
-								node.west.x)/self.dxi**2.
-							node.ddydxidxi = (node.east.y - 2.*node.y + 
-								node.west.y)/self.dxi**2.
+							node.ddxdxidxi = (node.east.x - 2.*node.x +	node.west.x)/self.dxi**2.
+							node.ddydxidxi = (node.east.y - 2.*node.y + node.west.y)/self.dxi**2.
 		
 	"""
 	@Brief computes the cross derivatives 
 	"""
 	def __calcCrossDerivatives(self):
 		# cross derivates on the top and bottom excluding i = 0 and i = imax	
-		for i in xrange(1, self.numOfxiNodes-1):
+		for i in xrange(0, self.numOfxiNodes):
 			for j in xrange(0, self.numOfetaNodes, self.numOfetaNodes-1):
 				node = self.getNodeByLoc(i,j)
 
 				node.ddxdxideta = (node.east.dxdeta - node.west.dxdeta)/2./self.dxi
 				node.ddydxideta = (node.east.dydeta - node.west.dydeta)/2./self.dxi
 
-		# cross derivatives at i = 0 and i = imax excluding the top and bottom 
-		for i in xrange(0, self.numOfxiNodes, self.numOfxiNodes-1):
-			for j in xrange(1, self.numOfetaNodes-1):
-				node = self.getNodeByLoc(i,j)
-
-				node.ddxdxideta = (node.north.dxdxi - node.south.dxdxi)/2./self.deta
-				node.ddydxideta = (node.north.dydxi - node.south.dydxi)/2./self.deta
-
-		# cross derivatives at the for corners
-		node = self.getNodeByLoc(0,0)
-		node.ddxdxideta = (-3.*node.dxdxi + 4.*node.north.dxdxi - 
-			node.north.north.dxdxi)/2./self.deta
-		node.ddydxideta = (-3.*node.dydxi + 4.*node.north.dydxi - 
-			node.north.north.dydxi)/2./self.deta
-
-		node = self.getNodeByLoc(0,self.numOfetaNodes-1)
-		node.ddxdxideta = (3.*node.dxdxi - 4.*node.south.dxdxi + 
-			node.south.south.dxdxi)/2./self.deta
-		node.ddydxideta = (3.*node.dydxi - 4.*node.south.dydxi + 
-			node.south.south.dydxi)/2./self.deta
-
-		node = self.getNodeByLoc(self.numOfxiNodes-1,0)
-		node.ddxdxideta = (-3.*node.dxdxi + 4.*node.north.dxdxi - 
-			node.north.north.dxdxi)/2./self.deta
-		node.ddydxideta = (-3.*node.dydxi + 4.*node.north.dydxi - 
-			node.north.north.dydxi)/2./self.deta
-
-		node = self.getNodeByLoc(self.numOfxiNodes-1, self.numOfetaNodes-1)
-		node.ddxdxideta = (3.*node.dxdxi - 4.*node.south.dxdxi + 
-			node.south.south.dxdxi)/2./self.deta
-		node.ddydxideta = (3.*node.dydxi - 4.*node.south.dydxi + 
-			node.south.south.dydxi)/2./self.deta
-		
-				
 	"""
 	@Brief computes the jacobian for the transformation
 	"""
@@ -356,6 +300,7 @@ class Mesh(object):
 				node = self.getNodeByLoc(i,j)
 				
 				node.jac = 1./(node.dxdxi*node.dydeta - node.dxdeta*node.dydxi)			
+				#print i,j,node.absIndex, node.jac
 
 	"""
 	@Brief computes the transform metric for the computational coor.
@@ -383,6 +328,7 @@ class Mesh(object):
 					node.ddydxidxi*node.detady) + 2.*node.gama*(node.ddxdxideta*
 					node.detadx + node.ddydxideta*node.detady) + 1.*node.beta*(
 					node.ddxdetadeta*node.detadx + node.ddydetadeta*node.detady))
+				#print i,j,node.alfa,node.beta,node.gama
 
 	"""
 	@Brief Returns node object 
@@ -434,62 +380,61 @@ class Mesh(object):
 	@param numOfPlotLines   Number of lines in contour plots
 	"""
 	def plot(self,solution="approx",plotType='2d', dt=0.0, Re=0.0):
-		x = []
-		y = []
-		for i in xrange(self.numOfxiNodes):
-			node = self.getNodeByLoc(i,0)
-			x.append(node.x)
+		X = np.zeros((self.numOfxiNodes,self.numOfetaNodes))
+		Y = np.zeros((self.numOfxiNodes,self.numOfetaNodes))
 
-		for j in xrange(self.numOfetaNodes-1,-1,-1):
-			node = self.getNodeByLoc(0,j)
-			y.append(node.y)
-
-
-		X, Y = np.meshgrid(x, y)
+		for j in xrange(self.numOfetaNodes):
+			for i in xrange(self.numOfxiNodes):
+				node = self.getNodeByLoc(i,j)
+				X[i,j] = node.x
+				Y[i,j] = node.y
 
 		Solution = np.zeros(X.shape)
 		vVelocity = np.zeros(X.shape)
 		uVelocity = np.zeros(X.shape)
+		Vel = np.zeros(X.shape)
 
 		h = 0
-		for j in xrange(self.numOfetaNodes-1,-1,-1):
-			k = 0
-			for i in xrange(0,self.numOfxiNodes,1):
+		for j in xrange(self.numOfetaNodes):
+			for i in xrange(self.numOfxiNodes):
 				node = self.getNodeByLoc(i,j)
 				if solution=="Phi":
-					Solution[h,k] = node.LaplaceSolution
+					Solution[i,j] = node.LaplaceSolution
 					solTitle = '2-D Stream Function. Resolution '
 					saveTitle = 'StreamFunctionRe'+str(int(Re))+'Resolution'
-					levels = [-1.0e-10,-1.0e-7,-1.0e-5,-1.0e-4,-0.01,
-					-0.03,-0.05,-0.07,-0.09,-0.1,-0.11,-0.115,-0.1175,
-					1.0e-8,1.0e-7,1.0e-6,1.0e-5,1.0e-4,2.5e-4,5.0e-4,
-					1.0e-3,1.5e-3,3.0e-3]
+					levels = [-5.0,-4.0,-3.0,-2.0,-1.0,-0.9,-0.8,-0.7,-0.6,-0.5,
+					-0.4,-0.3,-0.2,-0.1,-0.09,-0.08,-0.07,-0.06,-0.05,-0.04,-0.03,
+					-0.02,-0.01,-0.001,-0.0001,-0.00001,0.0,0.00001,0.0001,0.001,
+					0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08,0.09,0.1,0.2,0.3,0.4,
+					0.5,0.6,0.7,0.8,0.9,1.0,2.0,3.0,4.0,5.0]
 				elif solution=="exact":
-					Solution[h,k] = node.exact
+					Solution[i,j] = node.exact
 				elif solution=="w":
-					Solution[h,k] = node.VorticitySolution
+					Solution[i,j] = node.VorticitySolution
 					solTitle = '2-D Vorticity. Resolution '
 					saveTitle = 'VorticityRe'+str(int(Re))+'Resolution'
-					levels = [-3.0,-2.0,-1.0,-0.5,0.0,0.5,1.0,2.0,3.0,4.0,5.0]
+					#levels = np.linspace(-10.0,10,0)
+					levels = 50
 				elif solution=="velocity":
 					solTitle = '2-D Velocity vector. Resolution '
 					saveTitle = 'VelocityRe'+str(int(Re))+'Resolution'
-					vVelocity[h,k] = node.vVelocity
-					uVelocity[h,k] = node.uVelocity	
-				k+= 1
-			h+=1
+					vVelocity[i,j] = node.vVelocityPhy
+					uVelocity[i,j] = node.uVelocityPhy
+					Vel[i,j] = (node.uVelocityPhy**2. + node.vVelocityPhy**2.)**0.5
         
 		if plotType=='2d':
-
+			fig = plt.figure(figsize=(10.5,6))
 			#cp = plt.contour(X, Y, Solution, sorted(levels), cmap='tab20')
-			cp = plt.contour(X, Y, Solution,levels=sorted(levels), cmap='tab20')
+			cp = plt.contour(X, Y, Solution, levels, cmap='tab20')
 			plt.title(solTitle + 'Re = '+ str(Re)+' '  +str(self.numOfxiNodes)+' x '+str(self.numOfetaNodes))
 			plt.ylabel('eta')
 			plt.xlabel('xi')
+			plt.ylim(-1.5,1.5)
+			plt.xlim(-1,4)
 			plt.colorbar(cp)
-			plt.savefig(saveTitle +str(self.numOfxiNodes)+'x'+str(self.numOfetaNodes)+'.png')
-			#plt.show()
-			plt.close()
+			#plt.savefig(saveTitle +str(self.numOfxiNodes)+'x'+str(self.numOfetaNodes)+'.png')
+			plt.show()
+			#plt.close()
 
 		elif plotType=='3d':
 
@@ -512,62 +457,11 @@ class Mesh(object):
                    coordinates='figure')
 			plt.ylabel('eta')
 			plt.xlabel('xi')
-			plt.savefig(saveTitle +str(self.numOfxiNodes)+'x'+str(self.numOfetaNodes)+'.png')
-			#plt.show()
-			plt.close()
-
-	def plotCenterLineUVelocity(self):
-		# center i node
-		ic = (self.numOfxiNodes-1)/2
-		plotVel = []
-		ploty = []
-		goalVel = [0.0,-0.03717, -0.04192, -0.04775, -0.06434, -0.10150,
-			-0.15662, -0.21090, -0.20581, -0.13641, 0.00332, 0.23151,
-			0.68717, 0.73722, 0.78871, 0.84123, 1.0]
-		goaly = [0.0,0.0547, 0.0625, 0.0703, 0.1016, 0.1719, 0.2813, 
-			0.4531, 0.5, 0.6172, 0.7344, 0.8516, 0.9531, 0.9609, 0.9688, 
-			0.9766, 1.0]
-		for j in xrange(self.numOfetaNodes):
-			node = self.getNodeByLoc(ic,j)
-			plotVel.append(node.uVelocityPhy)
-			ploty.append(node.y)
-		plt.plot(plotVel,ploty, label="Solution")
-		plt.plot(goalVel, goaly, 'o', label="Ghia")
-		plt.grid()
-		plt.legend()
-		plt.ylabel("y")
-		plt.ylim(0,1)
-		plt.xlabel("U Velocity")
-		plt.show()
-		#plt.savefig("uVelocity.png")
-		#plt.close()
-
-	def plotCenterLineVVelocity(self):
-		# center i node
-		jc = (self.numOfetaNodes-1)/2
-		plotVel = []
-		plotx = []
-		goalVel = [0.0, 0.09233, 0.10091, 0.10890, 0.12317, 0.16077, 
-			0.17507, 0.17527, 0.05454, -0.24533, -0.22445, -0.16914,
-			-0.10313, -0.08864, -0.07391, -0.05906, 0.0]
-		goalx = [0.0, 0.0625, 0.0703, 0.0781, 0.0938, 0.1563, 0.2266,
-			0.2344, 0.5, 0.8047, 0.8594, 0.9063, 0.9453, 0.9531, 0.9609, 
-			0.9688, 1.0]
-		for i in xrange(self.numOfxiNodes):
-			node = self.getNodeByLoc(i,jc)
-			plotVel.append(-node.vVelocityPhy)
-			plotx.append(node.x)
-		plt.plot(plotx,plotVel, label="Solution")
-		plt.plot(goalx, goalVel, 'o',label="Ghia")
-		plt.legend()
-		plt.grid()
-		plt.ylabel("V Velocity")
-		plt.xlabel("x")
-		plt.xlim(0,1)
-		#plt.savefig("vVelocity.png")
-		plt.show()
-		#plt.close()
-
+			plt.ylim(-1.5,1.5)
+			plt.xlim(-1,4)
+			#plt.savefig(saveTitle +str(self.numOfxiNodes)+'x'+str(self.numOfetaNodes)+'.png')
+			plt.show()
+			#plt.close()
 
 	"""
 	@Brief Linear alg solver. Solves Ax=b
